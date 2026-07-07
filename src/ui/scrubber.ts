@@ -16,7 +16,12 @@ export function createScrubber(ctx: AppCtx): {
   const timeEl = el("div", { class: "t" });
 
   // Hidden native picker, opened from the date/time display.
-  const picker = el("input", { type: "datetime-local", class: "vh", tabindex: "-1" });
+  const picker = el("input", {
+    type: "datetime-local",
+    class: "vh",
+    tabindex: "-1",
+    "aria-label": ctx.tr("scrubHint"),
+  });
   picker.addEventListener("change", () => {
     if (picker.value === "") return;
     const picked = new Date(picker.value);
@@ -28,7 +33,6 @@ export function createScrubber(ctx: AppCtx): {
     {
       type: "button",
       class: "datetime",
-      "aria-label": ctx.tr("scrubHint"),
       onclick: () => {
         const s = ctx.store.get();
         const base = effectiveTime(s);
@@ -42,9 +46,11 @@ export function createScrubber(ctx: AppCtx): {
     timeEl,
   );
 
+  // Pointer-only affordance; keyboard/AT users pick a time via the button →
+  // native datetime picker instead.
   const track = el(
     "div",
-    { class: "track", role: "slider", "aria-label": ctx.tr("scrubHint") },
+    { class: "track", "aria-hidden": "true" },
     el("div", { class: "ticks" }),
     el("div", { class: "centerline" }),
   );
@@ -92,7 +98,8 @@ export function createScrubber(ctx: AppCtx): {
     update(s) {
       const t = effectiveTime(s);
       dateEl.textContent = ctx.fmtDate(t);
-      timeEl.textContent = ctx.fmtTime(t, s.time === null);
+      // HH:MM even while live — a seconds readout would repaint every tick.
+      timeEl.textContent = ctx.fmtTime(t);
       nowBtn.classList.toggle("live", s.time === null);
       nowBtn.textContent = s.time === null ? ctx.tr("live") : ctx.tr("now");
     },

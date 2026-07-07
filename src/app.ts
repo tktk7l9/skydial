@@ -242,4 +242,7 @@ export function startApp(root: HTMLElement): void {
   showTab(initial);
   renderAll(initial);
   syncUrl(initial);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => document.documentElement.classList.add("bg-live"));
+  });
 }

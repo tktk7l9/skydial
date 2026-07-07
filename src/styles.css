@@ -58,8 +58,13 @@ body {
     "Hiragino Sans",
     "Noto Sans JP",
     sans-serif;
-  transition: background 1.2s linear;
   overflow-x: hidden;
+}
+
+/* The sky-gradient tween only turns on after first paint, so the initial
+   render lands directly on its final colors (keeps Speed Index honest). */
+:root.bg-live body {
+  transition: background 1.2s linear;
 }
 
 @media (prefers-reduced-motion: reduce) {
