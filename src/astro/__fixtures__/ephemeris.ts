@@ -99,6 +99,90 @@ export const USNO_SUN_FIXTURES: UsnoSunFixture[] = [
   },
 ];
 
+export interface UsnoMoonFixture {
+  name: string;
+  loc: GeoLocation;
+  dayStartUtc: string;
+  kind: "normal" | "alwaysUp";
+  /** Expected time, null = event must be absent, undefined = not asserted. */
+  rise: string | null | undefined;
+  set: string | null | undefined;
+  transit: string | null;
+  /** USNO fracillum for the day (0–1), or null when not asserted. */
+  illumination: number | null;
+}
+
+/** USNO oneday API moon values (minute precision, local times → UTC). */
+export const USNO_MOON_FIXTURES: UsnoMoonFixture[] = [
+  {
+    name: "USNO Tokyo 2026-06-21 (waxing crescent)",
+    loc: TOKYO,
+    dayStartUtc: "2026-06-20T15:00:00Z",
+    kind: "normal",
+    rise: "2026-06-21T01:57:00Z", // 10:57 JST
+    set: "2026-06-21T14:24:00Z", // 23:24 JST
+    transit: "2026-06-21T08:15:00Z", // 17:15 JST
+    illumination: 0.42,
+  },
+  {
+    name: "USNO Tokyo 2026-12-22 (set before rise)",
+    loc: TOKYO,
+    dayStartUtc: "2026-12-21T15:00:00Z",
+    kind: "normal",
+    rise: "2026-12-22T05:23:00Z", // 14:23 JST
+    set: "2026-12-21T19:35:00Z", // 04:35 JST
+    transit: "2026-12-22T13:03:00Z", // 22:03 JST
+    illumination: 0.94,
+  },
+  {
+    name: "USNO Sydney 2026-12-22",
+    loc: SYDNEY,
+    dayStartUtc: "2026-12-21T13:00:00Z",
+    kind: "normal",
+    rise: "2026-12-22T07:20:00Z", // 18:20 AEDT
+    set: "2026-12-21T16:13:00Z", // 03:13 AEDT
+    transit: "2026-12-22T12:15:00Z", // 23:15 AEDT
+    illumination: 0.94,
+  },
+  {
+    // USNO lists no moonrise for Tokyo 2026-07-09 (next rise 07-10 00:00
+    // JST). This engine puts that rise at 23:59:45 JST — 15 s the other side
+    // of midnight — so the skip day itself is model-borderline and the rise
+    // is deliberately NOT asserted here. The skip-day behaviour is covered
+    // by the month-long invariant test instead.
+    name: "USNO Tokyo 2026-07-09 (set/transit only)",
+    loc: TOKYO,
+    dayStartUtc: "2026-07-08T15:00:00Z",
+    kind: "normal",
+    rise: undefined,
+    set: "2026-07-09T04:27:00Z", // 13:27 JST
+    transit: "2026-07-08T21:21:00Z", // 06:21 JST
+    illumination: null,
+  },
+  {
+    // Polar "midnight moon": continuously above the horizon all day.
+    name: "USNO Tromsø 2026-12-22 (moon always up)",
+    loc: TROMSO,
+    dayStartUtc: "2026-12-21T23:00:00Z",
+    kind: "alwaysUp",
+    rise: null,
+    set: null,
+    transit: "2026-12-22T21:28:00Z", // upper transit 22:28 CET
+    illumination: 0.96,
+  },
+];
+
+/**
+ * USNO principal-phase instants (UTC), for illumination anchors.
+ * First quarter 2026-06-22 06:55 JST; last quarter 2026-07-08 04:29 JST;
+ * full moon 2026-12-24 10:28 JST.
+ */
+export const USNO_MOON_PHASES = {
+  firstQuarter: "2026-06-21T21:55:00Z",
+  lastQuarter: "2026-07-07T19:29:00Z",
+  full: "2026-12-24T01:28:00Z",
+} as const;
+
 /**
  * JPL Horizons airless apparent az/el of the sun's center for Tokyo
  * (139.6503E, 35.6762N, 0 m), fetched 2026-07-07. Anchors raw position

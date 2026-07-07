@@ -3,6 +3,7 @@
 // precision. Shared by the sun and the moon.
 
 import type { GeoLocation, RiseSetResult } from "./types";
+import { moonGeocentricAltitude, moonRiseSetThreshold } from "./lunar";
 import { sunAltitude } from "./solar";
 
 export type AltitudeFn = (t: Date) => number;
@@ -132,6 +133,24 @@ export interface SunDayEvents {
   nauticalDusk: Date | null;
   astronomicalDawn: Date | null;
   astronomicalDusk: Date | null;
+}
+
+export interface MoonDayEvents {
+  riseSet: RiseSetResult;
+  /** Upper transit, or null when the moon stays below the horizon all day. */
+  transit: { time: Date; altitude: number } | null;
+}
+
+/** Moon rise/set/transit for the 24h window starting at `dayStart`. */
+export function moonDayEvents(dayStart: Date, loc: GeoLocation): MoonDayEvents {
+  const end = new Date(dayStart.getTime() + 24 * 3600 * 1000);
+  const alt: AltitudeFn = (t) => moonGeocentricAltitude(t, loc);
+  const riseSet = classifyRiseSet(alt, moonRiseSetThreshold, dayStart, end);
+  const transit = findTransit(alt, dayStart, end);
+  return {
+    riseSet,
+    transit: riseSet.kind === "alwaysDown" ? null : transit,
+  };
 }
 
 /** All solar events for the 24h window starting at `dayStart`. */
