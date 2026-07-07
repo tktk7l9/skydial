@@ -3,12 +3,12 @@
 
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { sunDayEvents } from "../../astro/events";
+import { moonDayEvents, sunDayEvents } from "../../astro/events";
+import type { MoonDayEvents } from "../../astro/events";
 import { moonPosition } from "../../astro/lunar";
 import { sunPosition } from "../../astro/solar";
 import type { GeoLocation } from "../../astro/types";
 import { dayStartFor } from "../../state/dayWindow";
-import { saveLocation } from "../../state/geolocation";
 import type { AppState, TileLayer } from "../../state/appState";
 import type { AppCtx, View } from "../../app";
 import { el } from "../../ui/dom";
@@ -20,6 +20,8 @@ const COLORS = {
   moon: "#dfe6fb",
   sunrise: "#ff8c42",
   sunset: "#b06ae8",
+  moonrise: "#9fb4ec",
+  moonset: "#6f82c9",
 };
 
 const TILE_DEFS: Record<TileLayer, { url: string; attribution: string }> = {
@@ -51,6 +53,8 @@ export function createMapView(ctx: AppCtx): View {
     item(COLORS.moon, ctx.tr("moonDirection")),
     item(COLORS.sunrise, ctx.tr("sunriseDirection")),
     item(COLORS.sunset, ctx.tr("sunsetDirection")),
+    item(COLORS.moonrise, ctx.tr("moonriseDirection")),
+    item(COLORS.moonset, ctx.tr("moonsetDirection")),
     el("div", { class: "li" }, el("span", {}, ctx.tr("tapMapToSet"))),
   );
 
@@ -76,11 +80,12 @@ export function createMapView(ctx: AppCtx): View {
   const moonRay = mkLine(COLORS.moon);
   const sunriseRay = mkLine(COLORS.sunrise, true);
   const sunsetRay = mkLine(COLORS.sunset, true);
+  const moonriseRay = mkLine(COLORS.moonrise, true);
+  const moonsetRay = mkLine(COLORS.moonset, true);
 
   map.on("click", (ev: L.LeafletMouseEvent) => {
     const loc: GeoLocation = { lat: ev.latlng.lat, lng: ev.latlng.lng };
-    saveLocation(localStorage, loc);
-    ctx.store.set({ location: loc, locationSource: "manual" });
+    ctx.setLocation(loc, "manual");
   });
 
   const observer = new ResizeObserver(() => map.invalidateSize());
@@ -89,6 +94,7 @@ export function createMapView(ctx: AppCtx): View {
   let centeredKey = "";
   let eventsKey = "";
   let cachedEvents: ReturnType<typeof sunDayEvents> | null = null;
+  let cachedMoonEvents: MoonDayEvents | null = null;
 
   return {
     root,
@@ -121,6 +127,7 @@ export function createMapView(ctx: AppCtx): View {
       if (eventsKey !== evKey) {
         eventsKey = evKey;
         cachedEvents = sunDayEvents(dayStart, loc);
+        cachedMoonEvents = moonDayEvents(dayStart, loc);
       }
       const rs = cachedEvents?.riseSet;
       if (rs !== undefined && rs.kind === "normal") {
@@ -133,6 +140,22 @@ export function createMapView(ctx: AppCtx): View {
       } else {
         sunriseRay.setLatLngs([]);
         sunsetRay.setLatLngs([]);
+      }
+      const mrs = cachedMoonEvents?.riseSet;
+      if (mrs !== undefined && mrs.kind === "normal") {
+        moonriseRay.setLatLngs(
+          mrs.rise !== null
+            ? rayLine(loc, moonPosition(mrs.rise, loc).azimuth, RAY_KM * 0.75)
+            : [],
+        );
+        moonsetRay.setLatLngs(
+          mrs.set !== null
+            ? rayLine(loc, moonPosition(mrs.set, loc).azimuth, RAY_KM * 0.75)
+            : [],
+        );
+      } else {
+        moonriseRay.setLatLngs([]);
+        moonsetRay.setLatLngs([]);
       }
     },
     destroy() {

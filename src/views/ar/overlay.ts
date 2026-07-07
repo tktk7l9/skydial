@@ -1,44 +1,19 @@
 // Canvas-2D AR overlay: compass ribbon, horizon line, and projected
-// sun/moon paths + markers for the assumed 60° horizontal field of view.
+// sun/moon paths + markers. The world layer rotates with the device roll;
+// the compass ribbon stays screen-fixed.
 
-import type { Pose } from "./orientation";
-
-export const H_FOV = 60;
-
-export interface SkyPoint {
-  azimuth: number;
-  altitude: number;
-}
+import type { Pose } from "./pose";
+import { H_FOV, project, wrap180 } from "./projection";
+import type { SkyPoint } from "./projection";
 
 export interface OverlayData {
   sun: SkyPoint;
   moon: SkyPoint;
   sunPath: SkyPoint[];
   moonPath: SkyPoint[];
-  moonIllumination: number;
   labels: { north: string; east: string; south: string; west: string };
   sunLabel: string;
   moonLabel: string;
-}
-
-function wrap180(d: number): number {
-  const r = ((d + 540) % 360) - 180;
-  return r;
-}
-
-export function project(
-  point: SkyPoint,
-  pose: Pose,
-  w: number,
-  h: number,
-): { x: number; y: number; visible: boolean } {
-  const vFov = (H_FOV * h) / w;
-  const dx = wrap180(point.azimuth - pose.heading);
-  const dy = point.altitude - pose.pitch;
-  const x = w / 2 + (dx / H_FOV) * w;
-  const y = h / 2 - (dy / vFov) * h;
-  const visible = Math.abs(dx) < H_FOV * 1.2 && Math.abs(dy) < vFov * 1.2;
-  return { x, y, visible };
 }
 
 function drawPath(
@@ -103,30 +78,34 @@ export function drawOverlay(
   g.clearRect(0, 0, w, h);
   const vFov = (H_FOV * h) / w;
 
-  // --- Horizon line ---
+  // ----- World layer (counter-rotates against the device roll) -----
+  g.save();
+  g.translate(w / 2, h / 2);
+  g.rotate((-pose.roll * Math.PI) / 180);
+  g.translate(-w / 2, -h / 2);
+
   const horizonY = h / 2 + (pose.pitch / vFov) * h;
-  if (horizonY > -40 && horizonY < h + 40) {
+  if (horizonY > -h && horizonY < h * 2) {
     g.strokeStyle = "rgba(255,255,255,0.45)";
     g.lineWidth = 1.5;
     g.setLineDash([8, 8]);
     g.beginPath();
-    g.moveTo(0, horizonY);
-    g.lineTo(w, horizonY);
+    g.moveTo(-w, horizonY);
+    g.lineTo(w * 2, horizonY);
     g.stroke();
     g.setLineDash([1, 0]);
   }
 
-  // --- Paths & markers ---
   drawPath(g, data.sunPath, pose, w, h, "rgba(255,194,102,0.85)");
   drawPath(g, data.moonPath, pose, w, h, "rgba(214,222,247,0.7)");
   const sun = project(data.sun, pose, w, h);
   if (sun.visible) glow(g, sun.x, sun.y, 26, "255,194,102", data.sunLabel);
   const moon = project(data.moon, pose, w, h);
-  if (moon.visible) {
-    glow(g, moon.x, moon.y, 18, "214,222,247", data.moonLabel);
-  }
+  if (moon.visible) glow(g, moon.x, moon.y, 18, "214,222,247", data.moonLabel);
 
-  // --- Compass ribbon (top) ---
+  g.restore();
+
+  // ----- Compass ribbon (screen-fixed) -----
   const ribbonY = 26;
   g.font = "600 12px system-ui, sans-serif";
   g.textAlign = "center";
@@ -157,7 +136,6 @@ export function drawOverlay(
       g.fillText(name, x, ribbonY + 28);
     }
   }
-  // Center heading readout.
   g.fillStyle = "rgba(255,255,255,0.95)";
   g.font = "700 15px system-ui, sans-serif";
   const headingText = `${Math.round(pose.heading)}°`;

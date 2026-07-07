@@ -60,6 +60,19 @@ export const en = {
   phaseLastQuarter: "Last quarter",
   phaseWaningCrescent: "Waning crescent",
 
+  // Countdown banner
+  sunriseIn: "Sunrise in {t}",
+  sunsetIn: "Sunset in {t}",
+  goldenEndsIn: "Golden hour ends in {t}",
+  blueEndsIn: "Blue hour ends in {t}",
+
+  // Sun extras
+  shadowRatio: "Shadow ×{r}",
+
+  // Date quick jumps
+  chipNextFull: "Next full moon",
+  chipNextNew: "Next new moon",
+
   // Timeline bands
   night: "Night",
   twilight: "Twilight",
@@ -101,6 +114,8 @@ export const en = {
   moonDirection: "Moon direction",
   sunriseDirection: "Sunrise",
   sunsetDirection: "Sunset",
+  moonriseDirection: "Moonrise",
+  moonsetDirection: "Moonset",
 
   // AR
   arIntroTitle: "AR compass",
@@ -112,6 +127,9 @@ export const en = {
   arSensorDenied: "Motion sensors unavailable — drag to look around",
   arCameraDenied: "Camera unavailable — showing sky gradient",
   arDragHint: "Drag to look around",
+
+  // PWA
+  updateReady: "New version ready — tap to update",
 
   // Compass points (16-wind)
   dirN: "N",

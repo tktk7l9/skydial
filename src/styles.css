@@ -246,6 +246,29 @@ main.content.wide {
   opacity: 0.55;
 }
 
+/* ===== Countdown banner ===== */
+
+.card.countdown {
+  padding: 12px var(--pad);
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-sun);
+  border-color: rgb(255 194 102 / 35%);
+}
+
+/* ===== Date quick-jump chips ===== */
+
+.pillgroup.chips {
+  margin-top: 10px;
+}
+
+.pillgroup.chips .pill {
+  min-height: 32px;
+  padding: 4px 12px;
+  font-size: 12.5px;
+}
+
 /* ===== Timeline band ===== */
 
 .timeline {
@@ -627,6 +650,25 @@ main.content.wide {
   width: 14px;
   height: 3px;
   border-radius: 2px;
+}
+
+/* ===== SW update toast ===== */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 140px);
+  transform: translateX(-50%);
+  z-index: 40;
+  padding: 10px 18px;
+  min-height: var(--tap);
+  border-radius: 999px;
+  background: var(--accent-sun);
+  color: #0b1026;
+  font-weight: 700;
+  font-size: 13.5px;
+  box-shadow: var(--shadow);
+  white-space: nowrap;
 }
 
 /* visually hidden (for a11y labels) */

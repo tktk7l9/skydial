@@ -9,7 +9,9 @@ import {
 } from "./state/appState";
 import type { AppState, Locale, Store, Tab, Theme, TileLayer } from "./state/appState";
 import { loadSavedLocation, requestLocation, saveLocation } from "./state/geolocation";
+import { autoUtcOffsetMin, deviceUtcOffsetMin } from "./state/tzEstimate";
 import { decodeUrlState, encodeUrlState } from "./state/urlState";
+import type { GeoLocation } from "./astro/types";
 import {
   detectLocale,
   directionKey,
@@ -50,6 +52,8 @@ export interface AppCtx {
   setLocale(l: Locale): void;
   setTheme(t: Theme): void;
   setTiles(t: TileLayer): void;
+  /** Persist + apply a location, auto-estimating the UTC offset when remote. */
+  setLocation(loc: GeoLocation, source: "gps" | "manual"): void;
   requestGps(): Promise<void>;
 }
 
@@ -76,6 +80,8 @@ export function startApp(root: HTMLElement): void {
   if (fromUrl.location) {
     initial.location = fromUrl.location;
     initial.locationSource = "manual";
+    // Shared links without an explicit ?utc= still get sensible local times.
+    initial.utcOffsetMin = autoUtcOffsetMin(fromUrl.location.lng, deviceUtcOffsetMin());
   }
   if (fromUrl.time !== undefined) initial.time = fromUrl.time;
   if (fromUrl.tab !== undefined) initial.tab = fromUrl.tab;
@@ -108,12 +114,17 @@ export function startApp(root: HTMLElement): void {
       localStorage.setItem(LS.tiles, v);
       store.set({ tiles: v });
     },
+    setLocation: (loc, source) => {
+      saveLocation(localStorage, loc);
+      store.set({
+        location: loc,
+        locationSource: source,
+        utcOffsetMin: autoUtcOffsetMin(loc.lng, deviceUtcOffsetMin()),
+      });
+    },
     requestGps: async () => {
       const loc = await requestLocation(navigator.geolocation);
-      if (loc !== null) {
-        saveLocation(localStorage, loc);
-        store.set({ location: loc, locationSource: "gps" });
-      }
+      if (loc !== null) ctx.setLocation(loc, "gps");
     },
   };
 
@@ -228,6 +239,27 @@ export function startApp(root: HTMLElement): void {
       const q = encodeUrlState(s);
       history.replaceState(null, "", q === "" ? location.pathname : q);
     }, 300);
+  }
+
+  // ----- Service-worker update toast -----
+  // sw.js activates new versions immediately (skipWaiting + claim); when a
+  // NEW controller takes over an already-controlled page, offer a reload.
+  if (import.meta.env.PROD && "serviceWorker" in navigator) {
+    let hadController = navigator.serviceWorker.controller !== null;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!hadController) {
+        hadController = true; // first install, nothing to refresh
+        return;
+      }
+      if (document.querySelector(".toast") !== null) return;
+      document.body.append(
+        el(
+          "button",
+          { type: "button", class: "toast", onclick: () => location.reload() },
+          ctx.tr("updateReady"),
+        ),
+      );
+    });
   }
 
   // ----- Live ticker (1 Hz while live and visible) -----

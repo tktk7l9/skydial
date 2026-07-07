@@ -35,7 +35,7 @@ function meridianArc(azDeg: number): THREE.Vector3[] {
   return pts;
 }
 
-function labelSprite(text: string, color: string, scale: number): THREE.Sprite {
+export function labelSprite(text: string, color: string, scale: number): THREE.Sprite {
   const canvas = document.createElement("canvas");
   canvas.width = 128;
   canvas.height = 128;

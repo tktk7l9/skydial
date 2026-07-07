@@ -1,26 +1,19 @@
-// Device-orientation abstraction. All platform branching lives here:
-//  - iOS Safari: DeviceOrientationEvent.requestPermission() + webkitCompassHeading
-//  - Android Chrome: 'deviceorientationabsolute' (alpha, magnetic north)
+// Device-orientation sources. All platform branching lives here:
+//  - iOS Safari: DeviceOrientationEvent.requestPermission() +
+//    webkitCompassHeading (already TRUE-north referenced)
+//  - Android Chrome: 'deviceorientationabsolute' (alpha, MAGNETIC north —
+//    the AR view applies the GSI declination correction on top)
 //  - No usable sensors: a "virtual" source driven by pointer drags.
-// v1 does not correct magnetic declination (±10° across Japan is < the
-// hand-held aiming error this view is used at).
+// The attitude math itself is in pose.ts (pure, fully tested).
 
-export interface Pose {
-  /** Compass heading the camera looks toward, degrees, N=0 clockwise. */
-  heading: number;
-  /** Camera pitch above the horizon, degrees. */
-  pitch: number;
-}
+import { poseFromSample } from "./pose";
+import type { OrientationSample, Pose } from "./pose";
 
-export type SourceKind = "sensors" | "virtual";
+export type SourceKind = "ios-compass" | "absolute" | "virtual";
 
 export interface HeadingSource {
   start(onPose: (p: Pose) => void): Promise<SourceKind>;
   stop(): void;
-}
-
-interface IosOrientationEvent extends DeviceOrientationEvent {
-  webkitCompassHeading?: number;
 }
 
 type RequestPermissionFn = () => Promise<"granted" | "denied">;
@@ -32,16 +25,8 @@ function iosRequestPermission(): RequestPermissionFn | null {
   return typeof fn === "function" ? fn : null;
 }
 
-/** Portrait-mode pose from a raw orientation event. */
-export function eventToPose(ev: IosOrientationEvent): Pose | null {
-  const pitch = (ev.beta ?? 90) - 90; // beta 90° = phone upright at horizon
-  if (typeof ev.webkitCompassHeading === "number") {
-    return { heading: ev.webkitCompassHeading, pitch };
-  }
-  if (ev.absolute && ev.alpha !== null) {
-    return { heading: (360 - ev.alpha) % 360, pitch };
-  }
-  return null;
+function screenAngle(): number {
+  return screen.orientation?.angle ?? 0;
 }
 
 /** Real device sensors; resolves "virtual" if nothing usable shows up. */
@@ -64,20 +49,30 @@ export function createSensorSource(): HeadingSource {
       }
 
       return await new Promise<SourceKind>((resolve) => {
-        let gotData = false;
+        let resolved = false;
         listener = (ev) => {
-          const pose = eventToPose(ev as IosOrientationEvent);
+          const sample = ev as DeviceOrientationEvent & { webkitCompassHeading?: number };
+          const s: OrientationSample = {
+            alpha: sample.alpha,
+            beta: sample.beta,
+            gamma: sample.gamma,
+            absolute: sample.absolute,
+            webkitCompassHeading: sample.webkitCompassHeading,
+          };
+          const pose = poseFromSample(s, screenAngle());
           if (pose === null) return;
-          if (!gotData) {
-            gotData = true;
-            resolve("sensors");
+          if (!resolved) {
+            resolved = true;
+            resolve(
+              typeof s.webkitCompassHeading === "number" ? "ios-compass" : "absolute",
+            );
           }
           onPose(pose);
         };
         window.addEventListener(eventName, listener);
-        // No events within 1.5s (desktop, sensor-less tablets) → virtual.
+        // No usable events within 1.5s (desktop, sensor-less) → virtual.
         window.setTimeout(() => {
-          if (!gotData) resolve("virtual");
+          if (!resolved) resolve("virtual");
         }, 1500);
       });
     },
@@ -90,7 +85,7 @@ export function createSensorSource(): HeadingSource {
 
 /** Drag-to-look-around fallback for sensor-less devices. */
 export function createVirtualSource(surface: HTMLElement, initial: Pose): HeadingSource {
-  let pose = { ...initial };
+  let pose = { ...initial, roll: 0 };
   let emit: ((p: Pose) => void) | null = null;
   let last: { x: number; y: number } | null = null;
 
@@ -104,6 +99,7 @@ export function createVirtualSource(surface: HTMLElement, initial: Pose): Headin
     pose = {
       heading: (pose.heading + (last.x - ev.clientX) * scale + 360) % 360,
       pitch: Math.min(85, Math.max(-40, pose.pitch + (ev.clientY - last.y) * scale)),
+      roll: 0,
     };
     last = { x: ev.clientX, y: ev.clientY };
     emit(pose);

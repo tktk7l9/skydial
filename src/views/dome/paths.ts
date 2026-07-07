@@ -70,6 +70,34 @@ export function buildDayPath(
   return group;
 }
 
+/**
+ * Hour beads along a day path: a small dot at each hour the body is above
+ * the horizon. Hours are counted from `dayStart` (local midnight), so the
+ * bead index equals the local wall-clock hour.
+ */
+export function buildHourBeads(
+  position: PositionFn,
+  dayStart: Date,
+  loc: GeoLocation,
+  color: number,
+): { group: THREE.Group; labeled: Array<{ hour: number; position: THREE.Vector3 }> } {
+  const group = new THREE.Group();
+  const labeled: Array<{ hour: number; position: THREE.Vector3 }> = [];
+  const geo = new THREE.SphereGeometry(0.008, 10, 10);
+  const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95 });
+  for (let hour = 0; hour < 24; hour++) {
+    const t = new Date(dayStart.getTime() + hour * 3_600_000);
+    const { azimuth, altitude } = position(t, loc);
+    if (altitude < 0) continue;
+    const pt = toDome(azimuth, altitude);
+    const bead = new THREE.Mesh(geo, mat);
+    bead.position.copy(pt);
+    group.add(bead);
+    if (hour % 6 === 0) labeled.push({ hour, position: pt });
+  }
+  return { group, labeled };
+}
+
 /** Radial-gradient glow sprite for the sun / moon markers. */
 export function glowSprite(rgb: string, size: number): THREE.Sprite {
   const canvas = document.createElement("canvas");

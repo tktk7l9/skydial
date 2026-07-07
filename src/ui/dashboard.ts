@@ -7,10 +7,17 @@ import type { MoonDayEvents, SunDayEvents } from "../astro/events";
 import { blueHours, goldenHours } from "../astro/goldenhour";
 import { moonPosition } from "../astro/lunar";
 import { moonGlyph, moonPhase } from "../astro/moonphase";
+import {
+  nextPrincipalPhase,
+  previousNewMoon,
+  solsticeInstant,
+} from "../astro/phaseevents";
 import { sunPosition } from "../astro/solar";
+import { tand } from "../astro/angles";
 import type { GeoLocation, Interval } from "../astro/types";
 import { dayStartFor } from "../state/dayWindow";
 import type { AppState } from "../state/appState";
+import type { MsgKey } from "../i18n/keys";
 import type { AppCtx } from "../app";
 import { clear, el } from "./dom";
 import { buildTimeline } from "./timelineBar";
@@ -22,6 +29,10 @@ interface DayCache {
   moon: MoonDayEvents;
   golden: Interval[];
   blue: Interval[];
+  /** Tomorrow's sun events, computed lazily for the countdown banner. */
+  nextSun?: SunDayEvents;
+  /** Last new moon instant (ms) for the accurate moon age. */
+  newMoonMs?: number;
 }
 
 function computeDay(time: Date, loc: GeoLocation, utcOffsetMin: number | null): DayCache {
@@ -34,6 +45,57 @@ function computeDay(time: Date, loc: GeoLocation, utcOffsetMin: number | null): 
     golden: goldenHours(dayStart, loc),
     blue: blueHours(dayStart, loc),
   };
+}
+
+/** The next thing worth counting down to, or null (polar edge cases). */
+function nextCountdown(
+  time: Date,
+  day: DayCache,
+  loc: GeoLocation,
+): { key: MsgKey; ms: number } | null {
+  const t = time.getTime();
+  for (const iv of day.blue) {
+    if (t >= iv.start.getTime() && t < iv.end.getTime()) {
+      return { key: "blueEndsIn", ms: iv.end.getTime() - t };
+    }
+  }
+  for (const iv of day.golden) {
+    if (t >= iv.start.getTime() && t < iv.end.getTime()) {
+      return { key: "goldenEndsIn", ms: iv.end.getTime() - t };
+    }
+  }
+  const candidates: Array<{ key: MsgKey; at: Date | null }> = [];
+  if (day.sun.riseSet.kind === "normal") {
+    candidates.push(
+      { key: "sunriseIn", at: day.sun.riseSet.rise },
+      { key: "sunsetIn", at: day.sun.riseSet.set },
+    );
+  }
+  const ahead = candidates
+    .filter((c): c is { key: MsgKey; at: Date } => c.at !== null && c.at.getTime() > t)
+    .sort((a, b) => a.at.getTime() - b.at.getTime());
+  if (ahead.length > 0) {
+    return { key: ahead[0].key, ms: ahead[0].at.getTime() - t };
+  }
+  // Today's events are all behind us — look at tomorrow's sunrise.
+  day.nextSun ??= sunDayEvents(new Date(day.dayStart.getTime() + 86_400_000), loc);
+  if (day.nextSun.riseSet.kind === "normal" && day.nextSun.riseSet.rise !== null) {
+    return { key: "sunriseIn", ms: day.nextSun.riseSet.rise.getTime() - t };
+  }
+  return null;
+}
+
+/** Accurate moon age (days since the real last new moon), cached per day. */
+function moonAgeDays(time: Date, day: DayCache): number {
+  const t = time.getTime();
+  if (
+    day.newMoonMs === undefined ||
+    t < day.newMoonMs ||
+    t - day.newMoonMs > 29.9 * 86_400_000
+  ) {
+    day.newMoonMs = previousNewMoon(time).getTime();
+  }
+  return (t - day.newMoonMs) / 86_400_000;
 }
 
 export function createDashboard(ctx: AppCtx): {
@@ -75,7 +137,15 @@ export function createDashboard(ctx: AppCtx): {
       el(
         "div",
         { class: "sub" },
-        `${ctx.trDir(sun.azimuth)} · ${ctx.tr("altitude")} ${ctx.fmtDeg(sun.apparentAltitude)}`,
+        `${ctx.trDir(sun.azimuth)} · ${ctx.tr("altitude")} ${ctx.fmtDeg(sun.apparentAltitude)}` +
+          (sun.apparentAltitude > 0.1
+            ? ` · ${ctx.tr("shadowRatio", {
+                r:
+                  1 / tand(sun.apparentAltitude) > 99
+                    ? "99+"
+                    : (1 / tand(sun.apparentAltitude)).toFixed(1),
+              })}`
+            : ""),
       ),
     );
     const moonCard = el(
@@ -96,12 +166,48 @@ export function createDashboard(ctx: AppCtx): {
     );
     root.append(el("div", { class: "hero" }, sunCard, moonCard));
 
+    // --- Countdown banner ---
+    const cd = nextCountdown(time, day, loc);
+    if (cd !== null) {
+      root.append(
+        el(
+          "div",
+          { class: "card countdown" },
+          ctx.tr(cd.key, { t: ctx.fmtDur(cd.ms) }),
+        ),
+      );
+    }
+
     // --- Timeline ---
     const timelineCard = el("div", { class: "card" }, el("h2", {}, ctx.fmtDate(time)));
     timelineCard.append(buildTimeline(day.dayStart, day.sun, day.golden, day.blue, time));
     const scale = el("div", { class: "timeline-scale" });
     for (const h of [0, 6, 12, 18, 24]) scale.append(el("span", {}, String(h)));
     timelineCard.append(scale);
+
+    // --- Date quick jumps ---
+    const sameClockOn = (target: Date, s2: AppState): Date => {
+      const targetDayStart = dayStartFor(target, s2.utcOffsetMin);
+      const sinceMidnight = time.getTime() - day.dayStart.getTime();
+      return new Date(targetDayStart.getTime() + sinceMidnight);
+    };
+    const chip = (label: string, jump: () => Date): HTMLElement =>
+      el(
+        "button",
+        { type: "button", class: "pill", onclick: () => ctx.store.set({ time: jump() }) },
+        label,
+      );
+    const year = day.dayStart.getUTCFullYear();
+    timelineCard.append(
+      el(
+        "div",
+        { class: "pillgroup chips" },
+        chip(ctx.tr("domeSummerSolstice"), () => sameClockOn(solsticeInstant(year, "jun"), s)),
+        chip(ctx.tr("domeWinterSolstice"), () => sameClockOn(solsticeInstant(year, "dec"), s)),
+        chip(ctx.tr("chipNextFull"), () => nextPrincipalPhase(time, "full")),
+        chip(ctx.tr("chipNextNew"), () => nextPrincipalPhase(time, "new")),
+      ),
+    );
     root.append(timelineCard);
 
     // --- Sun times ---
@@ -157,7 +263,7 @@ export function createDashboard(ctx: AppCtx): {
     moonTimes.append(
       timeRow(
         ctx.tr("moonAge"),
-        ctx.tr("moonAgeDays", { days: phase.ageDays.toFixed(1) }),
+        ctx.tr("moonAgeDays", { days: moonAgeDays(time, day).toFixed(1) }),
       ),
       timeRow(ctx.tr("illumination"), ctx.fmtPct(phase.illumination)),
       timeRow(

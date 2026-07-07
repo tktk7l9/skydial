@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="apple-touch-icon" href="/favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <title>Skydial — Sun &amp; Moon Tracker</title>
     <meta
       name="description"
@@ -32,6 +32,22 @@
       content="太陽と月の位置・日の出日没・薄明・ゴールデンアワーを、3Dドーム/地図/ARで。"
     />
     <meta name="twitter:image" content="https://skydial.vercel.app/ogp.png" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Skydial",
+        "alternateName": "Skydial — Sun & Moon Tracker",
+        "url": "https://skydial.vercel.app",
+        "description": "太陽と月の位置・日の出日没・薄明・ゴールデンアワー・月齢を、3Dドーム/地図/ARで確認できるPWA。Sun & moon position, rise/set, twilight and golden hour tracker.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires JavaScript",
+        "inLanguage": ["ja", "en"],
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
+        "image": "https://skydial.vercel.app/ogp.png"
+      }
+    </script>
   </head>
   <body>
     <div id="app"></div>

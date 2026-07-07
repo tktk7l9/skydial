@@ -35,11 +35,18 @@ npm run coverage   # カバレッジ(純ロジック層100%ゲート)
 npm run build      # tsc + vite build
 ```
 
-## 品質指標
+## 品質指標(実測)
 
-- lib層(astro/state/i18n/rays)カバレッジ 100% ゲート(CI)
-- Lighthouse mobile 100/100/100/100 目標
-- Mozilla Observatory A+ 目標
+- **Lighthouse: mobile / desktop とも 100/100/100/100**(本番 https://skydial.vercel.app ・2026-07-08計測)
+- **Mozilla Observatory: A+(120点・10/10)**
+- 純ロジック層(astro/state/i18n/測地・投影・姿勢)カバレッジ **100% ゲート**(CI)
+- npm audit 0件・gitleaks 0件
+
+## 精度の裏付け
+
+- 太陽位置は **JPL Horizons と ~0.002°で一致**、日の出入りは **USNO ±75秒**で突合
+- 月の出入りは USNO ±4分、朔望(新月/満月)は USNO ±10分
+- 磁気偏角は国土地理院 磁気図2020.0年値の近似式(日本域のみ・AR のAndroid磁北補正に使用)
 
 ## 精度について
 

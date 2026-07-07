@@ -4,8 +4,16 @@
 // Cross-origin requests (map tiles) pass through untouched — the map tab is the
 // only feature that needs the network; all astronomy runs locally.
 
-const CACHE = "skydial-v1";
-const SHELL = ["/", "/index.html", "/favicon.svg", "/manifest.webmanifest"];
+const CACHE = "skydial-v2";
+const SHELL = [
+  "/",
+  "/index.html",
+  "/favicon.svg",
+  "/manifest.webmanifest",
+  "/icon-192.png",
+  "/icon-512.png",
+  "/apple-touch-icon.png",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

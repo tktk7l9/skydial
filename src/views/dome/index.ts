@@ -9,8 +9,8 @@ import { dayStartFor } from "../../state/dayWindow";
 import type { AppState } from "../../state/appState";
 import type { AppCtx, View } from "../../app";
 import { el } from "../../ui/dom";
-import { buildDome } from "./scene";
-import { buildDayPath, disposeGroup, glowSprite, toDome } from "./paths";
+import { buildDome, labelSprite } from "./scene";
+import { buildDayPath, buildHourBeads, disposeGroup, glowSprite, toDome } from "./paths";
 
 const SUN_COLOR = 0xffc266;
 const MOON_COLOR = 0xd6def7;
@@ -75,6 +75,14 @@ export function createDomeView(ctx: AppCtx): View {
       moonPosition(t, l);
     pathGroup.add(buildDayPath(sunPos, dayStart, loc, { color: SUN_COLOR }));
     pathGroup.add(buildDayPath(moonPos, dayStart, loc, { color: MOON_COLOR, stepMinutes: 15 }));
+    // Hour beads along today's sun path, with wall-clock labels every 6h.
+    const beads = buildHourBeads(sunPos, dayStart, loc, SUN_COLOR);
+    pathGroup.add(beads.group);
+    for (const { hour, position } of beads.labeled) {
+      const label = labelSprite(String(hour), "#ffe3b3", 0.09);
+      label.position.copy(position.clone().multiplyScalar(1.06));
+      pathGroup.add(label);
+    }
     const year = dayStart.getUTCFullYear();
     const { jun, dec } = solsticeDates(year);
     pathGroup.add(buildDayPath(sunPos, jun, loc, { color: SOLSTICE_JUN, dashed: true, stepMinutes: 15 }));

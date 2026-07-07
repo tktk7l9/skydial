@@ -53,6 +53,16 @@ export const ja: Record<MsgKey, string> = {
   phaseLastQuarter: "下弦の月",
   phaseWaningCrescent: "有明月",
 
+  sunriseIn: "日の出まで {t}",
+  sunsetIn: "日の入りまで {t}",
+  goldenEndsIn: "ゴールデンアワー終了まで {t}",
+  blueEndsIn: "ブルーアワー終了まで {t}",
+
+  shadowRatio: "影 ×{r}",
+
+  chipNextFull: "次の満月",
+  chipNextNew: "次の新月",
+
   night: "夜",
   twilight: "薄明",
   daytime: "昼",
@@ -89,6 +99,8 @@ export const ja: Record<MsgKey, string> = {
   moonDirection: "月の方向",
   sunriseDirection: "日の出方向",
   sunsetDirection: "日の入り方向",
+  moonriseDirection: "月の出方向",
+  moonsetDirection: "月の入り方向",
 
   arIntroTitle: "ARコンパス",
   arIntroBody:
@@ -99,6 +111,8 @@ export const ja: Record<MsgKey, string> = {
   arSensorDenied: "センサーが使えません — ドラッグで見回してください",
   arCameraDenied: "カメラが使えません — 空のグラデーションを表示します",
   arDragHint: "ドラッグで見回す",
+
+  updateReady: "新しいバージョンがあります — タップで更新",
 
   dirN: "北",
   dirNNE: "北北東",

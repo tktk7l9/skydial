@@ -7,6 +7,8 @@ const PURE_GLOBS = [
   "src/state/**/*.ts",
   "src/i18n/**/*.ts",
   "src/views/map/rays.ts",
+  "src/views/ar/pose.ts",
+  "src/views/ar/projection.ts",
 ];
 
 export default defineConfig({

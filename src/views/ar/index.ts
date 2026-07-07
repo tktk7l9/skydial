@@ -1,6 +1,9 @@
 // AR compass view: camera passthrough + sensor-driven overlay, with staged
-// permissions (explainer card → motion → camera) and graceful fallbacks.
+// permissions (explainer card → motion → camera), graceful fallbacks, a
+// screen wake lock while active, and magnetic-declination correction for
+// the Android (magnetic-north) sensor path.
 
+import { declinationWestDeg } from "../../astro/declination";
 import { moonPosition } from "../../astro/lunar";
 import { moonPhase } from "../../astro/moonphase";
 import { sunPosition } from "../../astro/solar";
@@ -11,9 +14,11 @@ import type { AppCtx, View } from "../../app";
 import { el } from "../../ui/dom";
 import { startCamera, stopCamera } from "./camera";
 import { createSensorSource, createVirtualSource } from "./orientation";
-import type { HeadingSource, Pose } from "./orientation";
+import type { HeadingSource, SourceKind } from "./orientation";
+import type { Pose } from "./pose";
 import { drawOverlay } from "./overlay";
-import type { OverlayData, SkyPoint } from "./overlay";
+import type { OverlayData } from "./overlay";
+import type { SkyPoint } from "./projection";
 
 function samplePath(
   position: (t: Date, loc: GeoLocation) => SkyPoint,
@@ -38,18 +43,35 @@ export function createArView(ctx: AppCtx): View {
     { class: "card view-center-card" },
     el("h2", {}, ctx.tr("arIntroTitle")),
     el("p", {}, ctx.tr("arIntroBody")),
-    el("button", { type: "button", class: "btn primary", onclick: () => void begin() }, ctx.tr("arStart")),
+    el(
+      "button",
+      { type: "button", class: "btn primary", onclick: () => void begin() },
+      ctx.tr("arStart"),
+    ),
   );
 
   const root = el("div", { class: "view-fill" }, video, canvas, intro, hint);
 
   let source: HeadingSource | null = null;
-  let pose: Pose = { heading: 180, pitch: 15 };
+  let kind: SourceKind = "virtual";
+  let pose: Pose = { heading: 180, pitch: 15, roll: 0 };
   let running = false;
   let rafId = 0;
   let pathKey = "";
   let sunPath: SkyPoint[] = [];
   let moonPath: SkyPoint[] = [];
+  let wakeLock: WakeLockSentinel | null = null;
+
+  async function acquireWakeLock(): Promise<void> {
+    try {
+      wakeLock = (await navigator.wakeLock?.request("screen")) ?? null;
+    } catch {
+      wakeLock = null; // low battery / unsupported — not worth surfacing
+    }
+  }
+  const onVisibility = (): void => {
+    if (running && document.visibilityState === "visible") void acquireWakeLock();
+  };
 
   function refreshPaths(time: Date): void {
     const s = ctx.store.get();
@@ -75,6 +97,14 @@ export function createArView(ctx: AppCtx): View {
     const g = canvas.getContext("2d");
     if (g !== null && w > 0) {
       g.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+      // Android's absolute orientation references magnetic north; correct to
+      // true north inside the GSI model's Japan coverage.
+      const correction =
+        kind === "absolute" ? (declinationWestDeg(s.location) ?? 0) : 0;
+      const drawPose: Pose = {
+        ...pose,
+        heading: (pose.heading - correction + 360) % 360,
+      };
       const sun = sunPosition(time, s.location);
       const moon = moonPosition(time, s.location);
       const phase = moonPhase(time);
@@ -83,7 +113,6 @@ export function createArView(ctx: AppCtx): View {
         moon: { azimuth: moon.azimuth, altitude: moon.apparentAltitude },
         sunPath,
         moonPath,
-        moonIllumination: phase.illumination,
         labels: {
           north: ctx.trDir(0),
           east: ctx.trDir(90),
@@ -93,18 +122,28 @@ export function createArView(ctx: AppCtx): View {
         sunLabel: `${ctx.tr("sun")} ${ctx.fmtDeg(sun.apparentAltitude)}`,
         moonLabel: `${ctx.tr("moon")} ${ctx.fmtPct(phase.illumination)}`,
       };
-      drawOverlay(g, data, pose, w, h);
+      drawOverlay(g, data, drawPose, w, h);
     }
     rafId = requestAnimationFrame(frame);
+  }
+
+  function flashHint(text: string): void {
+    hint.textContent = text;
+    hint.hidden = false;
+    window.setTimeout(() => {
+      hint.hidden = true;
+    }, 6000);
   }
 
   async function begin(): Promise<void> {
     intro.remove();
     running = true;
+    void acquireWakeLock();
+    document.addEventListener("visibilitychange", onVisibility);
 
     // 1) Orientation sensors (needs the user gesture we just got on iOS).
     source = createSensorSource();
-    const kind = await source.start((p) => {
+    kind = await source.start((p) => {
       pose = p;
     });
     if (kind === "virtual") {
@@ -113,24 +152,14 @@ export function createArView(ctx: AppCtx): View {
       void source.start((p) => {
         pose = p;
       });
-      hint.textContent = ctx.tr("arVirtualBody");
-      hint.hidden = false;
-      window.setTimeout(() => {
-        hint.hidden = true;
-      }, 6000);
+      flashHint(ctx.tr("arVirtualBody"));
     }
 
     // 2) Camera (falls back to the sky-gradient page background).
     const cameraOk = await startCamera(video);
     if (!cameraOk) {
       video.hidden = true;
-      if (kind !== "virtual") {
-        hint.textContent = ctx.tr("arCameraDenied");
-        hint.hidden = false;
-        window.setTimeout(() => {
-          hint.hidden = true;
-        }, 6000);
-      }
+      if (kind !== "virtual") flashHint(ctx.tr("arCameraDenied"));
     }
 
     frame();
@@ -146,6 +175,9 @@ export function createArView(ctx: AppCtx): View {
       cancelAnimationFrame(rafId);
       source?.stop();
       stopCamera(video);
+      document.removeEventListener("visibilitychange", onVisibility);
+      void wakeLock?.release().catch(() => undefined);
+      wakeLock = null;
     },
   };
 }
