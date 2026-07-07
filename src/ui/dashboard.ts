@@ -71,13 +71,12 @@ export function createDashboard(ctx: AppCtx): {
         el("span", { class: "dot" }),
         el("span", {}, ctx.tr("sun")),
       ),
+      el("div", { class: "big" }, ctx.fmtDeg(sun.azimuth)),
       el(
         "div",
-        { class: "big" },
-        ctx.fmtDeg(sun.azimuth),
-        el("span", { class: "dir" }, ctx.trDir(sun.azimuth)),
+        { class: "sub" },
+        `${ctx.trDir(sun.azimuth)} · ${ctx.tr("altitude")} ${ctx.fmtDeg(sun.apparentAltitude)}`,
       ),
-      el("div", { class: "sub" }, `${ctx.tr("altitude")} ${ctx.fmtDeg(sun.apparentAltitude)}`),
     );
     const moonCard = el(
       "div",
@@ -88,16 +87,11 @@ export function createDashboard(ctx: AppCtx): {
         el("span", { class: "dot" }),
         el("span", {}, `${ctx.tr("moon")} ${moonGlyph(phase.name)}`),
       ),
-      el(
-        "div",
-        { class: "big" },
-        ctx.fmtDeg(moon.azimuth),
-        el("span", { class: "dir" }, ctx.trDir(moon.azimuth)),
-      ),
+      el("div", { class: "big" }, ctx.fmtDeg(moon.azimuth)),
       el(
         "div",
         { class: "sub" },
-        `${ctx.tr("altitude")} ${ctx.fmtDeg(moon.apparentAltitude)} · ${ctx.fmtPct(phase.illumination)}`,
+        `${ctx.trDir(moon.azimuth)} · ${ctx.fmtDeg(moon.apparentAltitude)} · ${ctx.fmtPct(phase.illumination)}`,
       ),
     );
     root.append(el("div", { class: "hero" }, sunCard, moonCard));

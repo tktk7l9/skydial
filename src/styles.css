@@ -224,17 +224,10 @@ main.content.wide {
 
 .body-card .big {
   margin-top: 10px;
-  font-size: 28px;
+  font-size: 30px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   line-height: 1.15;
-}
-
-.body-card .big .dir {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-dim);
-  margin-left: 6px;
 }
 
 .body-card .sub {
@@ -505,15 +498,17 @@ main.content.wide {
 
 .setting-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px 12px;
   margin-bottom: 14px;
 }
 
 .setting-row .lbl {
   font-size: 14px;
   color: var(--text-dim);
+  white-space: nowrap;
 }
 
 .pillgroup {
