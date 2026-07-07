@@ -1,0 +1,20 @@
+{
+  "name": "Skydial — Sun & Moon Tracker",
+  "short_name": "Skydial",
+  "description": "太陽と月の位置・日の出日没・薄明・ゴールデンアワーを、3Dドーム/地図/ARで確認できるトラッカー。",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b1026",
+  "theme_color": "#0b1026",
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

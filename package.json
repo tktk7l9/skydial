@@ -1,0 +1,29 @@
+{
+  "name": "skydial",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "太陽と月の位置・出入り・薄明を追う、洗練されたクロスプラットフォームPWA(Sun path & moon tracker)",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1",
+    "leaflet": "^1.9.4",
+    "three": "0.185.0"
+  },
+  "devDependencies": {
+    "@types/leaflet": "^1.9.20",
+    "@types/three": "^0.185.0",
+    "@vitest/coverage-v8": "^4.1.6",
+    "typescript": "6.0.3",
+    "vite": "8.1.2",
+    "vitest": "^4.1.6"
+  }
+}
