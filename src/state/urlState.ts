@@ -3,13 +3,14 @@
 
 import type { AppState, Locale, Tab } from "./appState";
 import { DEFAULT_LOCATION } from "./appState";
+import { decodeHouse, encodeHouse } from "../sunsim/houseCodec";
 
 const TABS: readonly Tab[] = ["dashboard", "dome", "map", "ar"];
 const LOCALES: readonly Locale[] = ["ja", "en"];
 
 /** Fields that travel in the URL (theme/tiles are device preferences). */
 export type UrlState = Partial<
-  Pick<AppState, "location" | "time" | "tab" | "locale" | "utcOffsetMin">
+  Pick<AppState, "location" | "time" | "tab" | "locale" | "utcOffsetMin" | "house">
 >;
 
 function roundCoord(x: number): number {
@@ -33,6 +34,7 @@ export function encodeUrlState(state: AppState): string {
   // locale is a device preference and is not emitted — but incoming links
   // may carry ?lang= to open the app in a specific language (see decode).
   if (state.utcOffsetMin !== null) q.set("utc", String(state.utcOffsetMin));
+  if (state.house !== null) q.set("house", encodeHouse(state.house));
   const s = q.toString();
   return s === "" ? "" : `?${s}`;
 }
@@ -72,6 +74,12 @@ export function decodeUrlState(query: string): UrlState {
   const utc = Number(q.get("utc"));
   if (q.has("utc") && Number.isInteger(utc) && Math.abs(utc) <= 14 * 60) {
     out.utcOffsetMin = utc;
+  }
+
+  const house = q.get("house");
+  if (house !== null) {
+    const decoded = decodeHouse(house);
+    if (decoded !== null) out.house = decoded;
   }
 
   return out;

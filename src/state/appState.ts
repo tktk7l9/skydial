@@ -2,6 +2,7 @@
 // from snapshots; views subscribe to the slices they care about.
 
 import type { GeoLocation } from "../astro/types";
+import type { HouseModel } from "../sunsim/house";
 
 export type Tab = "dashboard" | "dome" | "map" | "ar";
 export type Theme = "auto" | "light" | "dark";
@@ -19,6 +20,8 @@ export interface AppState {
   tiles: TileLayer;
   /** Manual UTC offset in minutes for remote locations; null = device tz. */
   utcOffsetMin: number | null;
+  /** Parametric house for the insolation study; null = feature off. */
+  house: HouseModel | null;
 }
 
 /** Tokyo — a sensible default until GPS or a manual pick lands. */
@@ -34,6 +37,7 @@ export function defaultState(locale: Locale): AppState {
     theme: "auto",
     tiles: "osm",
     utcOffsetMin: null,
+    house: null,
   };
 }
 

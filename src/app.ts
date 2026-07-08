@@ -12,6 +12,8 @@ import { loadSavedLocation, requestLocation, saveLocation } from "./state/geoloc
 import { autoUtcOffsetMin, deviceUtcOffsetMin } from "./state/tzEstimate";
 import { decodeUrlState, encodeUrlState } from "./state/urlState";
 import type { GeoLocation } from "./astro/types";
+import { decodeHouse, encodeHouse } from "./sunsim/houseCodec";
+import type { HouseModel } from "./sunsim/house";
 import {
   detectLocale,
   directionKey,
@@ -54,6 +56,8 @@ export interface AppCtx {
   setTiles(t: TileLayer): void;
   /** Persist + apply a location, auto-estimating the UTC offset when remote. */
   setLocation(loc: GeoLocation, source: "gps" | "manual"): void;
+  /** Persist + apply the insolation-study house model (null = off). */
+  setHouse(house: HouseModel | null): void;
   requestGps(): Promise<void>;
 }
 
@@ -61,6 +65,7 @@ const LS = {
   locale: "skydial:locale",
   theme: "skydial:theme",
   tiles: "skydial:tiles",
+  house: "skydial:house",
 };
 
 export function startApp(root: HTMLElement): void {
@@ -76,6 +81,8 @@ export function startApp(root: HTMLElement): void {
     initial.location = saved;
     initial.locationSource = "manual";
   }
+  const savedHouse = localStorage.getItem(LS.house);
+  if (savedHouse !== null) initial.house = decodeHouse(savedHouse);
   const fromUrl = decodeUrlState(location.search);
   if (fromUrl.location) {
     initial.location = fromUrl.location;
@@ -87,6 +94,7 @@ export function startApp(root: HTMLElement): void {
   if (fromUrl.tab !== undefined) initial.tab = fromUrl.tab;
   if (fromUrl.locale !== undefined) initial.locale = fromUrl.locale;
   if (fromUrl.utcOffsetMin !== undefined) initial.utcOffsetMin = fromUrl.utcOffsetMin;
+  if (fromUrl.house !== undefined) initial.house = fromUrl.house;
 
   const store = createStore(initial);
 
@@ -121,6 +129,11 @@ export function startApp(root: HTMLElement): void {
         locationSource: source,
         utcOffsetMin: autoUtcOffsetMin(loc.lng, deviceUtcOffsetMin()),
       });
+    },
+    setHouse: (house) => {
+      if (house === null) localStorage.removeItem(LS.house);
+      else localStorage.setItem(LS.house, encodeHouse(house));
+      store.set({ house });
     },
     requestGps: async () => {
       const loc = await requestLocation(navigator.geolocation);

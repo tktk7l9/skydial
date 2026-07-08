@@ -61,6 +61,17 @@ describe("urlState", () => {
     expect(decodeUrlState("?lang=ja").locale).toBe("ja");
   });
 
+  it("house model rides along in the URL and survives the round-trip", async () => {
+    const { defaultHouse } = await import("../sunsim/house");
+    const state = { ...defaultState("ja"), house: defaultHouse() };
+    const q = encodeUrlState(state);
+    expect(new URLSearchParams(q.slice(1)).has("house")).toBe(true);
+    expect(decodeUrlState(q).house).toEqual(defaultHouse());
+    // null house emits nothing; broken house params are dropped.
+    expect(new URLSearchParams(encodeUrlState(defaultState("ja"))).has("house")).toBe(false);
+    expect(decodeUrlState("?house=9.9.9").house).toBeUndefined();
+  });
+
   it("utc offset must be an integer within ±14h", () => {
     expect(decodeUrlState("?utc=540").utcOffsetMin).toBe(540);
     expect(decodeUrlState("?utc=-720").utcOffsetMin).toBe(-720);
