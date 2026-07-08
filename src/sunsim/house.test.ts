@@ -37,6 +37,21 @@ describe("clampHouse", () => {
     expect(c.elevationM).toBe(3000);
   });
 
+  it("non-finite azimuths fall back to 0", () => {
+    expect(clampHouse({ ...base, azimuthDeg: Number.NaN }).azimuthDeg).toBe(0);
+    const rotNaN = clampHouse({
+      ...base,
+      obstacles: [{ x: 0, y: -12, w: 8, d: 8, h: 6, rotDeg: Number.POSITIVE_INFINITY }],
+    });
+    expect(rotNaN.obstacles[0].rotDeg).toBe(0);
+  });
+
+  it("keeps an explicit ridgeAxis 'd'", () => {
+    expect(
+      clampHouse({ ...base, roof: { kind: "gable", pitchSun: 3, ridgeAxis: "d" } }).roof,
+    ).toEqual({ kind: "gable", pitchSun: 3, ridgeAxis: "d" });
+  });
+
   it("normalizes every roof kind and bad enum values", () => {
     expect(clampHouse({ ...base, roof: { kind: "flat" } }).roof).toEqual({ kind: "flat" });
     expect(
@@ -46,6 +61,9 @@ describe("clampHouse", () => {
     expect(
       clampHouse({ ...base, roof: { kind: "shed", pitchSun: -1, lowSide: 9 as 0 } }).roof,
     ).toEqual({ kind: "shed", pitchSun: 0, lowSide: 2 });
+    expect(
+      clampHouse({ ...base, roof: { kind: "shed", pitchSun: 2, lowSide: 1 } }).roof,
+    ).toEqual({ kind: "shed", pitchSun: 2, lowSide: 1 });
   });
 
   it("truncates window/obstacle lists and sanitizes entries", () => {

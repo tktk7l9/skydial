@@ -86,6 +86,12 @@ describe("skyViewFactorRatio", () => {
     expect(skyViewFactorRatio(g.windows[0], g.triangles)).toBeLessThan(0.2);
   });
 
+  it("degenerate downward normal guards against 0/0", () => {
+    const g = buildHouseGeometry(plainHouse({ windows: [window] }));
+    const upsideDown = { ...g.windows[0], normal: [0, -1, 0] as const };
+    expect(skyViewFactorRatio(upsideDown, g.triangles)).toBe(1);
+  });
+
   it("eave + neighbor stack multiplicatively-ish (monotone decrease)", () => {
     const open = buildHouseGeometry(plainHouse({ windows: [window] }));
     const eave = buildHouseGeometry(plainHouse({ eaveOut: 1, windows: [window] }));

@@ -67,6 +67,9 @@ describe("buildHouseGeometry — triangle budget", () => {
   it("shed: walls + roof + high wall + 2 side gussets = 14", () => {
     const m = plainHouse({ roof: { kind: "shed", pitchSun: 2, lowSide: 0 } });
     expect(buildHouseGeometry(m).triangles).toHaveLength(14);
+    // Odd lowSide spans the width instead of the depth.
+    const side = plainHouse({ roof: { kind: "shed", pitchSun: 2, lowSide: 1 } });
+    expect(buildHouseGeometry(side).triangles).toHaveLength(14);
   });
 
   it("each obstacle adds 10 triangles (5 quads, no bottom)", () => {
@@ -108,6 +111,13 @@ describe("buildHouseGeometry — windows", () => {
     expect(g.windows[0].areaM2).toBeCloseTo(10 * 1, 6); // clipped to wall width
     // Second window's offset is pulled back inside the wall.
     expect(g.windows).toHaveLength(2);
+  });
+
+  it("zero-width windows are dropped entirely", () => {
+    const m = plainHouse({
+      windows: [{ face: 0, w: 0, h: 1, sill: 0.9, off: 1, shgc: 0.6 }],
+    });
+    expect(buildHouseGeometry(m).windows).toHaveLength(0);
   });
 
   it("tall windows are clipped to the eave height", () => {
