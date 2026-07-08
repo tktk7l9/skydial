@@ -7,7 +7,9 @@ import * as THREE from "three";
 import { buildHouseGeometry, sunDirection } from "../../sunsim/geometry";
 import type { HouseGeometry, WindowGeo } from "../../sunsim/geometry";
 import type { HouseModel } from "../../sunsim/house";
+import { computeFloorPatch } from "../../sunsim/interior";
 import { directShadeFraction } from "../../sunsim/shading";
+import type { Vec3 } from "../../sunsim/raycast";
 import { sunPosition } from "../../astro/solar";
 import type { GeoLocation } from "../../astro/types";
 import { disposeGroup } from "./paths";
@@ -16,6 +18,33 @@ const WALL_COLOR = 0x9aa3c7;
 const OBSTACLE_COLOR = 0x565f80;
 const WINDOW_SHADED = new THREE.Color(0x33406e);
 const WINDOW_LIT = new THREE.Color(0xffc266);
+// One tint per window (cycled), so overlapping patches from different
+// windows stay visually distinguishable on the floor.
+const PATCH_COLORS = [0xffd699, 0xffb3c6, 0xc9a6ff, 0x9fe6c9, 0xffe08a, 0x9fd8ff];
+// Dome-unit height for the floor patch — just above the shadow-catcher
+// ground disk (0.002) so it doesn't z-fight with it.
+const PATCH_Y = 0.0022;
+
+/** Fan-triangulate a convex floor polygon (real-meter x/z) into dome units. */
+function buildPatchGeometry(polygon: readonly Vec3[], scale: number): THREE.BufferGeometry {
+  const geo = new THREE.BufferGeometry();
+  const n = polygon.length;
+  if (n < 3) {
+    geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(0), 3));
+    return geo;
+  }
+  const positions = new Float32Array((n - 2) * 9);
+  let o = 0;
+  for (let i = 1; i < n - 1; i++) {
+    for (const p of [polygon[0], polygon[i], polygon[i + 1]]) {
+      positions[o++] = p[0] * scale;
+      positions[o++] = PATCH_Y;
+      positions[o++] = p[2] * scale;
+    }
+  }
+  geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  return geo;
+}
 
 function soupToGeometry(
   tris: HouseGeometry["triangles"],
@@ -55,14 +84,35 @@ export function createHouseLayer(model: HouseModel): HouseLayer {
   group.add(scaled);
 
   // House vs obstacle triangles (obstacles are appended last, 10 tris each).
+  // Walls are always the first 8 triangles (4 faces × 2 tris — see
+  // geometry.ts buildHouseGeometry); the roof follows. The roof is rendered
+  // translucent so the interior floor and sunlight patches stay visible
+  // from any camera angle (a "dollhouse" cutaway), while still casting an
+  // accurate shadow (shadow-map casting isn't affected by material opacity).
+  const WALL_TRI_COUNT = 8;
   const houseTriCount = geo.triangles.length - model.obstacles.length * 10;
-  const houseMesh = new THREE.Mesh(
-    soupToGeometry(geo.triangles, 0, houseTriCount),
+
+  const wallMesh = new THREE.Mesh(
+    soupToGeometry(geo.triangles, 0, WALL_TRI_COUNT),
     new THREE.MeshLambertMaterial({ color: WALL_COLOR, side: THREE.DoubleSide }),
   );
-  houseMesh.castShadow = true;
-  houseMesh.receiveShadow = true;
-  scaled.add(houseMesh);
+  wallMesh.castShadow = true;
+  wallMesh.receiveShadow = true;
+  scaled.add(wallMesh);
+
+  const roofMesh = new THREE.Mesh(
+    soupToGeometry(geo.triangles, WALL_TRI_COUNT, houseTriCount),
+    new THREE.MeshLambertMaterial({
+      color: WALL_COLOR,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.16,
+      depthWrite: false,
+    }),
+  );
+  roofMesh.castShadow = true;
+  roofMesh.receiveShadow = true;
+  scaled.add(roofMesh);
 
   if (model.obstacles.length > 0) {
     const obsMesh = new THREE.Mesh(
@@ -90,8 +140,9 @@ export function createHouseLayer(model: HouseModel): HouseLayer {
   group.add(ground);
 
   // Windows: emissive quads re-tinted per update.
-  const windowMeshes: Array<{ mesh: THREE.Mesh; win: WindowGeo }> = [];
-  for (const win of geo.windows) {
+  const windowMeshes: Array<{ mesh: THREE.Mesh; win: WindowGeo; patch: THREE.Mesh }> = [];
+  for (let wi = 0; wi < geo.windows.length; wi++) {
+    const win = geo.windows[wi];
     const mesh = new THREE.Mesh(
       new THREE.PlaneGeometry(win.widthM, win.heightM),
       new THREE.MeshBasicMaterial({ color: WINDOW_SHADED, side: THREE.DoubleSide }),
@@ -104,8 +155,25 @@ export function createHouseLayer(model: HouseModel): HouseLayer {
     );
     mesh.quaternion.setFromRotationMatrix(m);
     mesh.position.set(...win.center);
-    windowMeshes.push({ mesh, win });
     scaled.add(mesh);
+
+    // Floor sunlight patch — lives in dome-unit space (see PATCH_Y), not
+    // the real-meter `scaled` subgroup, so it can sit just above the
+    // shadow-catcher ground disk without a coordinate-space mismatch.
+    const patch = new THREE.Mesh(
+      buildPatchGeometry([], scale),
+      new THREE.MeshBasicMaterial({
+        color: PATCH_COLORS[wi % PATCH_COLORS.length],
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      }),
+    );
+    patch.visible = false;
+    group.add(patch);
+
+    windowMeshes.push({ mesh, win, patch });
   }
 
   // Sun light + soft ambient, in dome units. Direction tracks the real sun.
@@ -137,20 +205,37 @@ export function createHouseLayer(model: HouseModel): HouseLayer {
         sun.intensity = 0.5 + 0.8 * Math.min(1, pos.apparentAltitude / 20);
       }
       const sunDir = up ? sunDirection(pos.azimuth, pos.apparentAltitude) : null;
-      for (const { mesh, win } of windowMeshes) {
+      for (const { mesh, win, patch } of windowMeshes) {
         let t = 0;
+        let fDirect = 0;
+        let cosTheta = 0;
         if (sunDir !== null) {
-          const cosTheta = Math.max(
+          cosTheta = Math.max(
             0,
             sunDir[0] * win.normal[0] + sunDir[1] * win.normal[1] + sunDir[2] * win.normal[2],
           );
           if (cosTheta > 0) {
-            t = directShadeFraction(win, sunDir, geo.triangles) * Math.min(1, cosTheta * 1.6);
+            fDirect = directShadeFraction(win, sunDir, geo.triangles);
+            t = fDirect * Math.min(1, cosTheta * 1.6);
           }
         }
         (mesh.material as THREE.MeshBasicMaterial).color
           .copy(WINDOW_SHADED)
           .lerp(WINDOW_LIT, t);
+
+        const floorPatch =
+          sunDir !== null && cosTheta > 0 && fDirect > 0
+            ? computeFloorPatch(model, win, sunDir)
+            : null;
+        patch.geometry.dispose();
+        if (floorPatch !== null) {
+          patch.geometry = buildPatchGeometry(floorPatch.polygon, scale);
+          (patch.material as THREE.MeshBasicMaterial).opacity = 0.55 * fDirect;
+          patch.visible = true;
+        } else {
+          patch.geometry = buildPatchGeometry([], scale);
+          patch.visible = false;
+        }
       }
     },
     dispose() {
