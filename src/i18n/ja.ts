@@ -89,6 +89,8 @@ export const ja: Record<MsgKey, string> = {
   accuracyNote:
     "位置は概算です(太陽~0.01°・月~0.3°)。撮影・日照計画向けで、航海など高精度用途には使えません。",
 
+  houseChip: "家",
+
   domeToday: "今日",
   domeSummerSolstice: "夏至",
   domeWinterSolstice: "冬至",

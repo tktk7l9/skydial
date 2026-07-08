@@ -102,6 +102,9 @@ export const en = {
   accuracyNote:
     "Positions are approximate (sun ~0.01°, moon ~0.3°) — for photography and daylight planning, not navigation.",
 
+  // House / insolation study
+  houseChip: "House",
+
   // Dome
   domeToday: "Today",
   domeSummerSolstice: "Jun solstice",

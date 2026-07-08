@@ -45,7 +45,12 @@ export interface WindowGeo {
   /** World compass azimuth of the outward normal. */
   azimuthDeg: number;
   normal: Vec3;
+  /** Left→right axis along the wall (seen from outside). */
+  hAxis: Vec3;
   center: Vec3;
+  /** Opening size after clipping to the wall, m. */
+  widthM: number;
+  heightM: number;
   areaM2: number;
   /** Grid sample points, offset 1 cm outward along the normal. */
   samples: Vec3[];
@@ -220,7 +225,10 @@ function buildWindow(m: HouseModel, faces: Face[], spec: WindowSpec): WindowGeo 
     spec,
     azimuthDeg: faceAzimuth(m, spec.face),
     normal: f.normal,
+    hAxis: f.hAxis,
     center: add(facePoint(f, off + w / 2, spec.sill + h / 2), lift),
+    widthM: w,
+    heightM: h,
     areaM2: w * h,
     samples,
   };

@@ -11,6 +11,10 @@ import type { AppCtx, View } from "../../app";
 import { el } from "../../ui/dom";
 import { buildDome, labelSprite } from "./scene";
 import { buildDayPath, buildHourBeads, disposeGroup, glowSprite, toDome } from "./paths";
+import { createHouseLayer } from "./house3d";
+import type { HouseLayer } from "./house3d";
+import { clampHouse, defaultHouse } from "../../sunsim/house";
+import { encodeHouse } from "../../sunsim/houseCodec";
 
 const SUN_COLOR = 0xffc266;
 const MOON_COLOR = 0xd6def7;
@@ -26,10 +30,24 @@ export function createDomeView(ctx: AppCtx): View {
   const canvas = el("canvas", {});
   const legend = el("div", { class: "legend" });
   const hint = el("div", { class: "view-hint" }, ctx.tr("domeDragHint"));
-  const root = el("div", { class: "view-fill" }, canvas, legend, hint);
+  const houseChip = el(
+    "button",
+    {
+      type: "button",
+      class: "pill house-chip",
+      onclick: () => {
+        const current = ctx.store.get().house;
+        ctx.setHouse(current === null ? clampHouse(defaultHouse()) : null);
+      },
+    },
+    ctx.tr("houseChip"),
+  );
+  const root = el("div", { class: "view-fill" }, canvas, legend, houseChip, hint);
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(55, 1, 0.05, 20);
   // North = -z in dome space, so sitting at -z looks toward the southern sky
@@ -62,6 +80,8 @@ export function createDomeView(ctx: AppCtx): View {
   let pathGroup: THREE.Group | null = null;
   let pathKey = "";
   let cameraOriented = false;
+  let houseLayer: HouseLayer | null = null;
+  let houseKey = "";
 
   function rebuildPaths(dayStart: Date, loc: GeoLocation): void {
     if (pathGroup !== null) {
@@ -162,6 +182,23 @@ export function createDomeView(ctx: AppCtx): View {
         pathKey = key;
         rebuildPaths(dayStart, s.location);
       }
+
+      // House layer: rebuild when the model changes, drop when turned off.
+      const hKey = s.house === null ? "" : encodeHouse(s.house);
+      if (hKey !== houseKey) {
+        houseKey = hKey;
+        if (houseLayer !== null) {
+          scene.remove(houseLayer.group);
+          houseLayer.dispose();
+          houseLayer = null;
+        }
+        if (s.house !== null) {
+          houseLayer = createHouseLayer(s.house);
+          scene.add(houseLayer.group);
+        }
+      }
+      houseChip.classList.toggle("active", s.house !== null);
+      houseLayer?.update(time, s.location);
       const sun = sunPosition(time, s.location);
       const moon = moonPosition(time, s.location);
       sunMarker.position.copy(toDome(sun.azimuth, sun.altitude, 1));
@@ -175,6 +212,7 @@ export function createDomeView(ctx: AppCtx): View {
       observer.disconnect();
       controls.dispose();
       if (pathGroup !== null) disposeGroup(pathGroup);
+      houseLayer?.dispose();
       disposeGroup(scene);
       renderer.dispose();
     },
