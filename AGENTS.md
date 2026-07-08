@@ -13,17 +13,32 @@ Sun Surveyor / Sun Seeker の代替を、洗練されたモバイルファース
 
 ## テスト方針(lib 100%)
 
-- `src/astro/**`・`src/state/**`・`src/i18n/**`・`src/views/map/rays.ts` は
+- `src/astro/**`・`src/state/**`・`src/i18n/**`・`src/views/map/rays.ts`・
+  `src/views/ar/pose.ts`・`src/views/ar/projection.ts`・`src/sunsim/**` は
   カバレッジ100%ゲート(vitest.config.ts)。UI/Three/Leaflet層は対象外。
 - 天体計算は fixture 突合(`src/astro/__fixtures__/ephemeris.ts`、出典コメント必須):
-  NOAA Solar Calculator・国立天文台こよみ。許容誤差=太陽±1分/±0.1°、月±5分/±0.3°。
+  NOAA Solar Calculator・国立天文台こよみ・USNO・JPL Horizons。許容誤差=太陽±1分/±0.1°、月±5分/±0.3°。
+- 日射計算は pvlib-python 生成 fixture(`src/sunsim/__fixtures__/clearsky.ts`、生成スクリプト全文コミット必須)
+  と0.1%以内で突合。物理不変量(冬至南面>夏至南面・北面窓の冬至直達≈0 等)もセットで。
 - エッジを必ず含める: 極夜白夜(型 `RiseSetResult` で表現)・月の出/入りが無い日(null)・うるう年・日付変更線。
 
 ## 天体計算の出典
 
 - 太陽: Meeus "Astronomical Algorithms" ch.25 低精度式(誤差~0.01°)。
-- 月: Meeus ch.47 truncated(主要項・目標0.3°)+地心視差補正。月齢/輝面比は ch.48。
+- 月: Meeus ch.47 truncated(主要項・目標0.3°)+地心視差補正。月齢/輝面比は ch.48。朔望・夏至冬至は
+  離角/黄経クロッシングの二分法ソルバー(`src/astro/phaseevents.ts`)。
 - 座標変換・大気差(Bennett)は `src/astro/coords.ts`。方位規約は N=0°時計回り。
+
+## 日射計算(sunsim/)の出典
+
+- 晴天モデル: Ineichen–Perez (2002)。傾斜面: Hay–Davies。係数は pvlib-python(BSD-3-Clause)から移植、
+  関数ヘッダに出典URL必須。新しい放射モデルの式を追加するときは一次出典または pvlib 参照実装から
+  確認すること(係数を記憶や推測で書かない)。
+- 幾何/遮蔽: `src/sunsim/geometry.ts` が唯一の三角形メッシュ生成元(表示用 `house3d.ts` と
+  遮蔽計算 `shading.ts` の両方がここから作る)。ENU座標はドーム(`views/dome/`)と共通
+  (+x東,+y上,−z北)。新しい屋根形状・障害物形状を追加する際もこの座標系を維持する。
+- `HouseModel` は個人の実寸法を含む可能性がある。デフォルト値(`defaultHouse()`)は
+  「典型例」に留め、実データをリポジトリにコミットしない(localStorage/URL共有のみ)。
 
 ## コミット粒度
 
@@ -32,6 +47,5 @@ tsc green / test green / build green を保ってから commit する。
 
 ## 留意
 
-- private 開始。public化は publish-check 経由のみ。
-- 個人情報・実データをコード/テストに入れない。
-- 計算値は概算(航海・測量用途ではない)。UIにも脚注済み。
+- **public**(2026-07-08〜)。公開リポジトリなので個人情報・実データをコード/テストに入れない。
+- 計算値は概算(航海・測量用途ではない)。日射計算も気象データなしの晴天モデル概算。UIにも脚注済み。
