@@ -9,6 +9,7 @@ const PURE_GLOBS = [
   "src/views/map/rays.ts",
   "src/views/ar/pose.ts",
   "src/views/ar/projection.ts",
+  "src/sunsim/**/*.ts",
 ];
 
 export default defineConfig({
@@ -19,7 +20,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: PURE_GLOBS,
-      exclude: ["src/**/*.test.ts", "src/astro/__fixtures__/**"],
+      exclude: ["src/**/*.test.ts", "src/**/__fixtures__/**"],
       reporter: ["text", "json-summary", "html"],
       thresholds: Object.fromEntries(
         PURE_GLOBS.map((glob) => [
