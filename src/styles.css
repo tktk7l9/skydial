@@ -683,6 +683,13 @@ select.num-input {
   margin-top: 4px;
 }
 
+.room-patch-line {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border);
+  font-variant-numeric: tabular-nums;
+}
+
 .gain-bar-label {
   width: 56px;
   font-size: 11.5px;

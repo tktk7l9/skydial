@@ -133,8 +133,14 @@ export const ja: Record<MsgKey, string> = {
   resDiffuse: "散乱",
   resReflected: "反射",
   resComputing: "計算中…",
+  resRoomDepth: "侵入距離",
+  resRoomArea: "床の照射面積",
+  resRoomHours: "室内日照",
+  resNoFloorPatch: "床に日射パッチなし(遮蔽されているか、光線が低く床まで届きません)",
   houseNote:
     "快晴(Ineichen–Perez・TL可変)前提の概算です。ηは一定・地面反射の遮蔽は未考慮 — 実際の天候では下回ります。",
+  houseInteriorNote:
+    "床の日向パッチは簡略化した表現です。建物全体を1部屋として扱い、床に届く前に奥の壁に当たってしまうような低い光線は「床に届かない」として扱います。",
 
   domeToday: "今日",
   domeSummerSolstice: "夏至",

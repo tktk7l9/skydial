@@ -147,8 +147,14 @@ export const en = {
   resDiffuse: "Diffuse",
   resReflected: "Reflected",
   resComputing: "Computing…",
+  resRoomDepth: "Reaches",
+  resRoomArea: "Floor lit",
+  resRoomHours: "Room sunshine",
+  resNoFloorPatch: "No floor patch (blocked, or beam too low to reach the floor)",
   houseNote:
     "Clear-sky estimate (Ineichen–Perez, adjustable TL). Constant η, unshaded ground reflection — real weather yields less.",
+  houseInteriorNote:
+    "The floor patch is a simplification: the whole house is treated as one room, and a beam that would reach the far wall before the floor is shown as not reaching the floor at all.",
 
   // Dome
   domeToday: "Today",

@@ -117,6 +117,15 @@ export function openHousePanel(ctx: AppCtx, time: Date): void {
           bar(ctx.tr("resDirect"), b.direct, maxKwh, "var(--accent-sun)"),
           bar(ctx.tr("resDiffuse"), b.isotropic + b.circumsolar, maxKwh, "var(--accent-blue)"),
           bar(ctx.tr("resReflected"), b.reflected, maxKwh, "var(--accent-golden)"),
+          el(
+            "div",
+            { class: "footnote room-patch-line" },
+            w.maxPatchAreaM2 > 0
+              ? `${ctx.tr("resRoomDepth")}: ${w.maxPatchDepthM.toFixed(1)}m · ` +
+                `${ctx.tr("resRoomArea")}: ${w.maxPatchAreaM2.toFixed(1)}m² · ` +
+                `${ctx.tr("resRoomHours")}: ${ctx.fmtDur(w.interiorLitMinutes * 60_000)}`
+              : ctx.tr("resNoFloorPatch"),
+          ),
         );
         body.append(card);
       }
@@ -127,7 +136,10 @@ export function openHousePanel(ctx: AppCtx, time: Date): void {
           `${ctx.tr("resTotal")}: ${result.totalGainKwh.toFixed(1)} kWh`,
         ),
       );
-      body.append(el("p", { class: "footnote" }, ctx.tr("houseNote")));
+      body.append(
+        el("p", { class: "footnote" }, ctx.tr("houseNote")),
+        el("p", { class: "footnote" }, ctx.tr("houseInteriorNote")),
+      );
     });
   }
 
