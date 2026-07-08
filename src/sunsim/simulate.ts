@@ -6,6 +6,7 @@ import { sunPosition } from "../astro/solar";
 import type { GeoLocation } from "../astro/types";
 import { buildHouseGeometry, sunDirection } from "./geometry";
 import type { HouseModel, WindowSpec } from "./house";
+import { computeFloorPatch } from "./interior";
 import {
   cosIncidence,
   extraterrestrialNormal,
@@ -16,6 +17,8 @@ import { directShadeFraction, skyViewFactorRatio } from "./shading";
 
 /** WMO sunshine threshold: direct normal irradiance ≥ 120 W/m². */
 const SUNSHINE_DNI_WM2 = 120;
+/** Floor patches smaller than this are treated as "no meaningful light". */
+const MIN_PATCH_AREA_M2 = 0.05;
 
 export interface IrradiationBreakdown {
   direct: number;
@@ -37,6 +40,12 @@ export interface WindowDayResult {
   gainKwh: number;
   /** Minutes with DNI ≥ 120 W/m² and the window ≥ half lit. */
   sunshineMinutes: number;
+  /** Largest sunlit floor patch from this window over the day, m² (shade-scaled). */
+  maxPatchAreaM2: number;
+  /** Deepest the beam reaches into the room over the day, m. */
+  maxPatchDepthM: number;
+  /** Minutes with a meaningfully large floor patch (≥ 0.05 m²) from this window. */
+  interiorLitMinutes: number;
 }
 
 export interface HouseDayResult {
@@ -64,6 +73,9 @@ export function simulateDay(
     irradiationKwhM2: { direct: 0, circumsolar: 0, isotropic: 0, reflected: 0, total: 0 },
     gainKwh: 0,
     sunshineMinutes: 0,
+    maxPatchAreaM2: 0,
+    maxPatchDepthM: 0,
+    interiorLitMinutes: 0,
   }));
 
   for (let i = 0; i < steps; i++) {
@@ -100,6 +112,18 @@ export function simulateDay(
       out.gainKwh += (win.spec.shgc * win.areaM2 * poa.total * stepH) / 1000;
       if (sky.dni >= SUNSHINE_DNI_WM2 && fDirect >= 0.5) {
         out.sunshineMinutes += stepMinutes;
+      }
+
+      if (fDirect > 0) {
+        const patch = computeFloorPatch(model, win, sunDir);
+        if (patch !== null) {
+          const shadedAreaM2 = patch.areaM2 * fDirect;
+          if (shadedAreaM2 >= MIN_PATCH_AREA_M2) {
+            out.interiorLitMinutes += stepMinutes;
+            if (shadedAreaM2 > out.maxPatchAreaM2) out.maxPatchAreaM2 = shadedAreaM2;
+            if (patch.depthM > out.maxPatchDepthM) out.maxPatchDepthM = patch.depthM;
+          }
+        }
       }
     }
   }

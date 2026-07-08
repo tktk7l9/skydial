@@ -106,3 +106,47 @@ describe("simulateDay — passive-design invariants (Tokyo, TL=3)", () => {
     expect(w.irradiationKwhM2.total).toBeLessThan(6);
   });
 });
+
+describe("simulateDay — interior floor-patch invariants", () => {
+  it("unobstructed south window casts a real floor patch, deeper in winter than summer", () => {
+    const summer = simulateDay(bare(), TOKYO, SUMMER).windows[0];
+    const winter = simulateDay(bare(), TOKYO, WINTER).windows[0];
+    expect(summer.maxPatchAreaM2).toBeGreaterThan(0);
+    expect(summer.interiorLitMinutes).toBeGreaterThan(0);
+    expect(winter.maxPatchAreaM2).toBeGreaterThan(0);
+    // Lower winter noon sun sends the beam deeper into the room.
+    expect(winter.maxPatchDepthM).toBeGreaterThan(summer.maxPatchDepthM);
+  });
+
+  it("north windows get no interior patch on the winter solstice", () => {
+    const north = bare({ windows: [{ ...southWindow, face: 2 }] });
+    const winter = simulateDay(north, TOKYO, WINTER).windows[0];
+    expect(winter.maxPatchAreaM2).toBe(0);
+    expect(winter.maxPatchDepthM).toBe(0);
+    expect(winter.interiorLitMinutes).toBe(0);
+  });
+
+  it("an eave that blocks the beam also blocks the interior patch", () => {
+    const eaved = bare({ eaveOut: 0.91 });
+    const r = simulateDay(eaved, TOKYO, SUMMER).windows[0];
+    // Direct beam is heavily cut at the summer solstice (existing invariant
+    // above); the residual floor patch should be small or absent too.
+    expect(r.maxPatchAreaM2).toBeLessThan(2);
+  });
+
+  it("a wall of neighbor directly in front blocks the interior patch entirely", () => {
+    const blocked = bare({
+      obstacles: [{ x: 0, y: -(8 / 2 + 0.5 + 1), w: 30, d: 1, h: 20, rotDeg: 0 }],
+    });
+    const r = simulateDay(blocked, TOKYO, WINTER).windows[0];
+    expect(r.maxPatchAreaM2).toBe(0);
+    expect(r.interiorLitMinutes).toBe(0);
+  });
+
+  it("polar night has no interior patch either", () => {
+    const tromso = { lat: 69.6492, lng: 18.9553 };
+    const r = simulateDay(bare(), tromso, new Date("2026-12-21T23:00:00Z")).windows[0];
+    expect(r.maxPatchAreaM2).toBe(0);
+    expect(r.interiorLitMinutes).toBe(0);
+  });
+});
