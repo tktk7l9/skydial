@@ -15,6 +15,8 @@ import { createHouseLayer } from "./house3d";
 import type { HouseLayer } from "./house3d";
 import { clampHouse, defaultHouse } from "../../sunsim/house";
 import { encodeHouse } from "../../sunsim/houseCodec";
+import { openHouseEditor } from "./houseEditor";
+import { openHousePanel } from "./housePanel";
 
 const SUN_COLOR = 0xffc266;
 const MOON_COLOR = 0xd6def7;
@@ -42,7 +44,33 @@ export function createDomeView(ctx: AppCtx): View {
     },
     ctx.tr("houseChip"),
   );
-  const root = el("div", { class: "view-fill" }, canvas, legend, houseChip, hint);
+  const editChip = el(
+    "button",
+    { type: "button", class: "pill house-chip house-chip-2", onclick: () => openHouseEditor(ctx) },
+    ctx.tr("houseEdit"),
+  );
+  editChip.hidden = true;
+  const resultsChip = el(
+    "button",
+    {
+      type: "button",
+      class: "pill house-chip house-chip-3",
+      onclick: () => openHousePanel(ctx, latestTime),
+    },
+    ctx.tr("houseResults"),
+  );
+  resultsChip.hidden = true;
+  let latestTime = new Date();
+  const root = el(
+    "div",
+    { class: "view-fill" },
+    canvas,
+    legend,
+    houseChip,
+    editChip,
+    resultsChip,
+    hint,
+  );
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -197,7 +225,10 @@ export function createDomeView(ctx: AppCtx): View {
           scene.add(houseLayer.group);
         }
       }
+      latestTime = time;
       houseChip.classList.toggle("active", s.house !== null);
+      editChip.hidden = s.house === null;
+      resultsChip.hidden = s.house === null;
       houseLayer?.update(time, s.location);
       const sun = sunPosition(time, s.location);
       const moon = moonPosition(time, s.location);
