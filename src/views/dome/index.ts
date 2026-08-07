@@ -19,9 +19,26 @@ import { openHouseEditor } from "./houseEditor";
 import { openHousePanel } from "./housePanel";
 
 const SUN_COLOR = 0xffc266;
+// Opening camera seat: a three-quarter view from the northwest. Facing
+// southeast keeps the sun's arc in frame while the house is seen on a corner
+// rather than flat-on, which reads as depth. Mirrored for the south.
+const VIEW_AZIMUTH_NORTH = 315;
+const VIEW_AZIMUTH_SOUTH = 135;
+const VIEW_RADIUS = 2.2;
+const VIEW_HEIGHT = 0.95;
 const MOON_COLOR = 0xd6def7;
 const SOLSTICE_JUN = 0x7fd8a8;
 const SOLSTICE_DEC = 0x8fa3e8;
+
+/** Camera seat on a compass bearing (dome frame: +x east, −z north). */
+function cameraSeat(azDeg: number): THREE.Vector3 {
+  const a = (azDeg * Math.PI) / 180;
+  return new THREE.Vector3(
+    Math.sin(a) * VIEW_RADIUS,
+    VIEW_HEIGHT,
+    -Math.cos(a) * VIEW_RADIUS,
+  );
+}
 
 function solsticeDates(year: number): { jun: Date; dec: Date } {
   // Calendar-day precision is plenty for reference paths.
@@ -78,9 +95,9 @@ export function createDomeView(ctx: AppCtx): View {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(55, 1, 0.05, 20);
-  // North = -z in dome space, so sitting at -z looks toward the southern sky
-  // (where the sun's arc lives in the northern hemisphere).
-  camera.position.set(0, 0.95, -2.2);
+  // Seated northwest, looking southeast — toward the southern sky where the
+  // sun's arc lives in the northern hemisphere.
+  camera.position.copy(cameraSeat(VIEW_AZIMUTH_NORTH));
   camera.lookAt(0, 0.25, 0);
 
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -202,7 +219,7 @@ export function createDomeView(ctx: AppCtx): View {
         // Start looking at the sun's arc: south in the northern hemisphere,
         // north in the southern.
         cameraOriented = true;
-        if (s.location.lat < 0) camera.position.set(0, 0.95, 2.2);
+        if (s.location.lat < 0) camera.position.copy(cameraSeat(VIEW_AZIMUTH_SOUTH));
       }
       const dayStart = dayStartFor(time, s.utcOffsetMin);
       const key = `${dayStart.getTime()}:${s.location.lat.toFixed(3)}:${s.location.lng.toFixed(3)}`;

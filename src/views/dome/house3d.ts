@@ -4,6 +4,7 @@
 // lit/shaded tinting.
 
 import * as THREE from "three";
+import { cosd, sind } from "../../astro/angles";
 import { buildHouseGeometry, sunDirection } from "../../sunsim/geometry";
 import type { HouseGeometry, WindowGeo } from "../../sunsim/geometry";
 import type { HouseModel } from "../../sunsim/house";
@@ -16,6 +17,8 @@ import { disposeGroup } from "./paths";
 
 const WALL_COLOR = 0x9aa3c7;
 const OBSTACLE_COLOR = 0x565f80;
+const TRUNK_COLOR = 0x6d6353;
+const CROWN_COLOR = 0x6f8f79;
 const WINDOW_SHADED = new THREE.Color(0x33406e);
 const WINDOW_LIT = new THREE.Color(0xffc266);
 // One tint per window (cycled), so overlapping patches from different
@@ -44,6 +47,53 @@ function buildPatchGeometry(polygon: readonly Vec3[], scale: number): THREE.Buff
   }
   geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
   return geo;
+}
+
+/**
+ * Decorative tree for the open ground north of the house — scenery only.
+ * It is drawn and casts a shadow, but it is deliberately NOT part of the
+ * triangle soup the shading engine raycasts: anything that must move the
+ * numbers belongs in `model.obstacles`, which the editor and the ?house=
+ * codec both carry.
+ */
+function buildTree(model: HouseModel): THREE.Group {
+  const tree = new THREE.Group();
+  const trunkH = 2.4;
+  const crownR = 2.4;
+
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.19, 0.34, trunkH, 8),
+    new THREE.MeshLambertMaterial({ color: TRUNK_COLOR }),
+  );
+  trunk.position.y = trunkH / 2;
+  trunk.castShadow = true;
+  tree.add(trunk);
+
+  // Three faceted lumps read as foliage without a texture; total height lands
+  // near 7 m, comfortably above the default ridge (~4.7 m).
+  const crownMat = new THREE.MeshLambertMaterial({ color: CROWN_COLOR, flatShading: true });
+  const lumps: Array<[x: number, y: number, z: number, r: number]> = [
+    [0, trunkH + crownR * 0.85, 0, crownR],
+    [-crownR * 0.6, trunkH + crownR * 0.35, crownR * 0.35, crownR * 0.62],
+    [crownR * 0.5, trunkH + crownR * 1.35, -crownR * 0.3, crownR * 0.55],
+  ];
+  for (const [x, y, z, r] of lumps) {
+    const lump = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), crownMat);
+    lump.position.set(x, y, z);
+    lump.castShadow = true;
+    tree.add(lump);
+  }
+
+  // Stand clear of the footprint's northern edge whatever the house's size or
+  // heading: the rotated rectangle reaches this far toward north (−z).
+  const a = model.azimuthDeg;
+  const northReach =
+    (model.width / 2) * Math.abs(sind(a)) +
+    (model.depth / 2) * Math.abs(cosd(a)) +
+    model.eaveOut;
+  // Nudged west so it clears the north-facing window rather than framing it.
+  tree.position.set(-1.5, 0, -(northReach + crownR + 1.4));
+  return tree;
 }
 
 function soupToGeometry(
@@ -128,6 +178,8 @@ export function createHouseLayer(model: HouseModel): HouseLayer {
     obsMesh.receiveShadow = true;
     scaled.add(obsMesh);
   }
+
+  scaled.add(buildTree(model));
 
   // Ground shadow catcher (sits just above the dome's ground disk).
   const ground = new THREE.Mesh(
