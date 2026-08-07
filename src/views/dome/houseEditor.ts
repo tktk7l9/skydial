@@ -6,7 +6,7 @@ import { clampHouse } from "../../sunsim/house";
 import type { HouseModel, Obstacle, WindowSpec } from "../../sunsim/house";
 import { faceAzimuth } from "../../sunsim/geometry";
 import type { AppCtx } from "../../app";
-import { el } from "../../ui/dom";
+import { closeSheet, el } from "../../ui/dom";
 import type { MsgKey } from "../../i18n/keys";
 
 export function openHouseEditor(ctx: AppCtx): void {
@@ -19,8 +19,7 @@ export function openHouseEditor(ctx: AppCtx): void {
   const body = el("div", {});
 
   function close(): void {
-    backdrop.remove();
-    sheet.remove();
+    closeSheet(backdrop, sheet);
   }
 
   function apply(next: HouseModel): void {

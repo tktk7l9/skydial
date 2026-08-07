@@ -7,7 +7,7 @@ import { encodeHouse } from "../../sunsim/houseCodec";
 import { simulateDay } from "../../sunsim/simulate";
 import type { HouseDayResult } from "../../sunsim/simulate";
 import type { AppCtx } from "../../app";
-import { el } from "../../ui/dom";
+import { closeSheet, el } from "../../ui/dom";
 
 type Scenario = "today" | "jun" | "dec";
 
@@ -61,8 +61,7 @@ export function openHousePanel(ctx: AppCtx, time: Date): void {
   let scenario: Scenario = "today";
 
   function close(): void {
-    backdrop.remove();
-    sheet.remove();
+    closeSheet(backdrop, sheet);
   }
 
   function scenarioDayStart(s: Scenario): Date {

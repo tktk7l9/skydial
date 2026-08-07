@@ -2,7 +2,7 @@
 
 import type { Locale, Theme, TileLayer } from "../state/appState";
 import type { AppCtx } from "../app";
-import { el } from "./dom";
+import { closeSheet, el } from "./dom";
 
 const UTC_CHOICES: ReadonlyArray<number> = [-480, -300, 0, 60, 330, 480, 540, 600];
 
@@ -14,15 +14,27 @@ function offsetLabel(min: number): string {
   return `UTC${sign}${h}${m === 0 ? "" : `:${String(m).padStart(2, "0")}`}`;
 }
 
-export function openSettings(ctx: AppCtx): void {
+/** `animate: false` swaps the sheet in place — see `rebuild` below. */
+export function openSettings(ctx: AppCtx, animate = true): void {
   const s = ctx.store.get();
 
-  const backdrop = el("div", { class: "sheet-backdrop", onclick: close });
-  const sheet = el("div", { class: "sheet", role: "dialog", "aria-modal": "true" });
+  const enter = animate ? "" : " no-enter";
+  const backdrop = el("div", { class: `sheet-backdrop${enter}`, onclick: close });
+  const sheet = el("div", {
+    class: `sheet${enter}`,
+    role: "dialog",
+    "aria-modal": "true",
+  });
 
   function close(): void {
+    closeSheet(backdrop, sheet);
+  }
+
+  /** Commit + re-render with fresh state, without replaying the slide-up. */
+  function rebuild(): void {
     backdrop.remove();
     sheet.remove();
+    openSettings(ctx, false);
   }
 
   function pills<T extends string | number>(
@@ -39,8 +51,7 @@ export function openSettings(ctx: AppCtx): void {
           class: `pill${c.value === current ? " active" : ""}`,
           onclick: () => {
             apply(c.value);
-            close();
-            openSettings(ctx); // rebuild with fresh state
+            rebuild();
           },
         },
         c.label,

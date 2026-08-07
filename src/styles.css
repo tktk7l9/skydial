@@ -201,6 +201,55 @@ main.content::-webkit-scrollbar-thumb,
   border-radius: 999px;
 }
 
+/* ===== Motion =====
+   Keyframes are shared by the tab views and the bottom sheets. The global
+   prefers-reduced-motion rule above collapses every duration, so none of
+   these need their own media query. */
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* Content rises as it fades in — the same direction the eye travels when a
+   new tab's cards arrive. */
+@keyframes view-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes sheet-out {
+  to {
+    transform: translateY(100%);
+  }
+}
+
+/* Re-inserting a view into `main.content` restarts these, so every tab switch
+   plays the entrance. Full-bleed views (canvas / Leaflet) only fade: a
+   transform on their container would make it their containing block mid-run. */
+main.content:not(.wide) > * {
+  animation: view-in 240ms cubic-bezier(0.22, 0.68, 0.36, 1) both;
+}
+
+main.content.wide > * {
+  animation: fade-in 240ms ease both;
+}
+
 /* ===== Cards ===== */
 
 .card {
@@ -524,6 +573,13 @@ main.content::-webkit-scrollbar-thumb,
   background: var(--surface);
 }
 
+/* The highlight slides between tabs instead of snapping. */
+.tabbar button {
+  transition:
+    color 200ms ease,
+    background-color 200ms ease;
+}
+
 /* ===== Settings sheet ===== */
 
 .sheet-backdrop {
@@ -531,6 +587,7 @@ main.content::-webkit-scrollbar-thumb,
   inset: 0;
   background: rgb(0 0 0 / 45%);
   z-index: 30;
+  animation: fade-in 200ms ease both;
 }
 
 .sheet {
@@ -550,6 +607,22 @@ main.content::-webkit-scrollbar-thumb,
   margin: 0 auto;
   max-height: 82dvh;
   overflow-y: auto;
+  animation: sheet-in 280ms cubic-bezier(0.22, 0.68, 0.36, 1) both;
+}
+
+/* Re-rendering a sheet in place (a settings pill commits and rebuilds) swaps
+   the node, which would otherwise replay the slide-up on every tap. */
+.sheet.no-enter:not(.closing),
+.sheet-backdrop.no-enter:not(.closing) {
+  animation: none;
+}
+
+.sheet.closing {
+  animation: sheet-out 200ms cubic-bezier(0.4, 0, 0.9, 0.5) both;
+}
+
+.sheet-backdrop.closing {
+  animation: fade-out 180ms ease both;
 }
 
 :root:not([data-theme="light"]) .sheet {
@@ -621,6 +694,10 @@ main.content::-webkit-scrollbar-thumb,
   position: relative;
   flex: 1;
   min-height: 0;
+  /* Own stacking context. Leaflet stacks its panes and controls up to
+     z-index 1000 and the legend sits at 800; without this they compete with
+     the sheet (z-index 31) in the root context and cover it. */
+  z-index: 0;
 }
 
 .view-fill canvas,
