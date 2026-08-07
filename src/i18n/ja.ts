@@ -74,6 +74,7 @@ export const ja: Record<MsgKey, string> = {
   latitude: "緯度",
   longitude: "経度",
   tapMapToSet: "地図をタップして地点を設定",
+  changeLocationOnMap: "地図で地点を変更",
 
   settings: "設定",
   language: "言語",

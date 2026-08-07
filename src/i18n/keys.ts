@@ -86,6 +86,7 @@ export const en = {
   latitude: "Latitude",
   longitude: "Longitude",
   tapMapToSet: "Tap the map to set the location",
+  changeLocationOnMap: "Change the location on the map",
 
   // Settings
   settings: "Settings",

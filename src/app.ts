@@ -151,11 +151,16 @@ export function startApp(root: HTMLElement): void {
   darkQuery.addEventListener("change", applyTheme);
 
   // ----- Shell -----
-  const locChip = el("button", { type: "button", class: "loc-chip", onclick: () => openSettings(ctx) });
+  // The chip is a readout of the current location, so it leads to where the
+  // location is actually edited — the map, which sets it on tap.
+  const locChip = el("button", {
+    type: "button",
+    class: "loc-chip",
+    onclick: () => store.set({ tab: "map" }),
+  });
   const gearBtn = el("button", {
     type: "button",
     class: "icon-btn",
-    "aria-label": "settings",
     onclick: () => openSettings(ctx),
   });
   gearBtn.innerHTML = svgIcon("gear");
@@ -214,7 +219,15 @@ export function startApp(root: HTMLElement): void {
     applyTheme();
     const time = effectiveTime(s);
     applySkyGradient(sunPosition(time, s.location).altitude);
-    locChip.textContent = `${s.location.lat.toFixed(2)}, ${s.location.lng.toFixed(2)}`;
+    const coords = `${s.location.lat.toFixed(2)}, ${s.location.lng.toFixed(2)}`;
+    locChip.textContent = coords;
+    // The topbar is not rebuilt on a locale switch, so its labels are set here.
+    locChip.title = ctx.tr("changeLocationOnMap");
+    locChip.setAttribute(
+      "aria-label",
+      `${ctx.tr("location")}: ${coords} — ${ctx.tr("changeLocationOnMap")}`,
+    );
+    gearBtn.setAttribute("aria-label", ctx.tr("settings"));
     scrubber.update(s);
     tabbar.update(s);
     views.get(s.tab)?.update(s, time);
