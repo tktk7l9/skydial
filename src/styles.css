@@ -13,6 +13,10 @@
   --accent-moon: #d6def7;
   --accent-golden: #f0a35e;
   --accent-blue: #7fa3e8;
+  /* Sits directly on the sky, whose brightness swings from midnight black to
+     midday blue independently of the theme — so it is a mid-luminance slate
+     that stays legible against both ends instead of a themed tint. */
+  --scrollbar: rgb(148 160 195 / 45%);
 
   --radius: 16px;
   --radius-sm: 10px;
@@ -152,16 +156,49 @@ main.content {
   min-height: 0;
   overflow-y: auto;
   padding: 4px var(--pad) 12px;
-  max-width: 680px;
   width: 100%;
-  margin: 0 auto;
+}
+
+/* The reading column is centered by the inner wrapper rather than by the
+   scroll box, so the scrollbar lands at the window edge instead of right
+   against the cards on a wide screen. */
+main.content:not(.wide) > * {
+  max-width: 680px;
+  margin-inline: auto;
 }
 
 main.content.wide {
-  max-width: none;
   padding: 0;
   display: flex;
   flex-direction: column;
+}
+
+/* ===== Scrollbars =====
+   A mouse or trackball keeps macOS scrollbars permanently on screen, where
+   the default bar reads as a bright stripe over the sky. Thin thumb, no
+   track. Safari before 18.2 falls back to the -webkit- pseudo-elements. */
+main.content,
+.sheet {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar) transparent;
+}
+
+main.content::-webkit-scrollbar,
+.sheet::-webkit-scrollbar {
+  width: 10px;
+}
+
+main.content::-webkit-scrollbar-track,
+.sheet::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+main.content::-webkit-scrollbar-thumb,
+.sheet::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar);
+  background-clip: padding-box;
+  border: 3px solid transparent;
+  border-radius: 999px;
 }
 
 /* ===== Cards ===== */
