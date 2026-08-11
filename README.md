@@ -38,11 +38,23 @@ npm run dev        # 開発サーバー
 npm test           # テスト
 npm run coverage   # カバレッジ(純ロジック層100%ゲート)
 npm run build      # tsc + vite build
+npm run deploy     # build + wrangler deploy(Cloudflare Workers)
 ```
+
+## ホスティング
+
+本番は **Cloudflare Workers (static assets)**: https://skydial.saitotakuya0719.workers.dev
+
+2026-08-11、Vercel 無料枠の超過でアカウントが停止（全プロジェクトが
+`402 DEPLOYMENT_DISABLED`）したため移行した。ビルド成果物は純粋な静的
+ファイルなので Worker スクリプトは無く、`wrangler.jsonc` の `assets` だけで
+配信している。セキュリティヘッダーは `public/_headers`（`vercel.json` の
+`headers` を移植したもの）。Vercel 側の設定も残してあるので、復旧すれば
+そのまま両方に出せる。
 
 ## 品質指標(実測)
 
-- **Lighthouse: mobile / desktop とも 100/100/100/100**(本番 https://skydial.vercel.app ・2026-07-08計測)
+- **Lighthouse: mobile / desktop とも 100/100/100/100**(Vercel 時代の本番 https://skydial.vercel.app ・2026-07-08計測。Cloudflare 移行後は再計測待ち)
 - **Mozilla Observatory: A+(120点・10/10)**
 - 純ロジック層(astro/state/i18n/測地・投影・姿勢)カバレッジ **100% ゲート**(CI)
 - npm audit 0件・gitleaks 0件

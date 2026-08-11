@@ -1,0 +1,22 @@
+/**
+ * Skydial — Cloudflare Workers (static assets only)
+ * https://developers.cloudflare.com/workers/static-assets/
+ *
+ * ビルド成果物は純粋な静的ファイルなので Worker スクリプト(main)は無い。
+ * セキュリティヘッダーは public/_headers から dist へコピーされたものが
+ * そのまま効く(Workers static assets が _headers を解釈する)。
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "skydial",
+  "compatibility_date": "2026-08-11",
+  "assets": {
+    "directory": "./dist",
+    // Vercel も rewrite 無しの素の静的配信だったので、未知のパスは 404 のまま
+    // にして挙動を揃える(状態は全てクエリパラメータなので SPA ルーティングは不要)。
+    "not_found_handling": "404-page",
+  },
+  "observability": {
+    "enabled": true,
+  },
+}
