@@ -15,7 +15,6 @@
     "coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@vercel/analytics": "^2.0.1",
     "leaflet": "^1.9.4",
     "three": "0.185.1"
   },
