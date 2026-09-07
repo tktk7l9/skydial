@@ -8,7 +8,7 @@ Sun Surveyor / Sun Seeker の代替を、洗練されたモバイルファース
 - **Vanilla Vite + TypeScript**。フレームワーク不使用。UIはDOM直組み(`src/ui/`)。
 - **重いライブラリは動的import**: Three.js(ドーム)と Leaflet(地図)は各タブ初回表示時にロード。
   初期バンドルはダッシュボード+天体計算のみ(数KB gzip目標)。`vite build` の出力で確認する。
-- **厳格CSP前提**(vercel.json)。inline script/style禁止。外部リソースは地図タイル(img-src)のみ。
+- **厳格CSP前提**(public/_headers)。inline script/style禁止。外部リソースは地図タイル(img-src)のみ。
 - **Permissions-Policy は camera/geolocation/センサー = self**。テンプレ由来の全拒否に戻さないこと(AR/GPSが黙って死ぬ)。
 
 ## テスト方針(lib 100%)
