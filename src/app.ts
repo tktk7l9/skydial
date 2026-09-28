@@ -12,7 +12,7 @@ import { loadSavedLocation, requestLocation, saveLocation } from "./state/geoloc
 import { autoUtcOffsetMin, deviceUtcOffsetMin } from "./state/tzEstimate";
 import { decodeUrlState, encodeUrlState } from "./state/urlState";
 import type { GeoLocation } from "./astro/types";
-import { decodeHouse, encodeHouse } from "./sunsim/houseCodec";
+import { hideHouse, houseToShow, loadVisibleHouse, saveHouse } from "./state/housePrefs";
 import type { HouseModel } from "./sunsim/house";
 import {
   detectLocale,
@@ -56,8 +56,10 @@ export interface AppCtx {
   setTiles(t: TileLayer): void;
   /** Persist + apply a location, auto-estimating the UTC offset when remote. */
   setLocation(loc: GeoLocation, source: "gps" | "manual"): void;
-  /** Persist + apply the insolation-study house model (null = off). */
-  setHouse(house: HouseModel | null): void;
+  /** Persist + apply (and show) the insolation-study house model. */
+  setHouse(house: HouseModel): void;
+  /** Show/hide the house. Hiding keeps the saved model (SHIG 38, 54). */
+  toggleHouse(): void;
   requestGps(): Promise<void>;
 }
 
@@ -65,7 +67,6 @@ const LS = {
   locale: "skydial:locale",
   theme: "skydial:theme",
   tiles: "skydial:tiles",
-  house: "skydial:house",
 };
 
 export function startApp(root: HTMLElement): void {
@@ -81,8 +82,7 @@ export function startApp(root: HTMLElement): void {
     initial.location = saved;
     initial.locationSource = "manual";
   }
-  const savedHouse = localStorage.getItem(LS.house);
-  if (savedHouse !== null) initial.house = decodeHouse(savedHouse);
+  initial.house = loadVisibleHouse(localStorage);
   const fromUrl = decodeUrlState(location.search);
   if (fromUrl.location) {
     initial.location = fromUrl.location;
@@ -97,6 +97,8 @@ export function startApp(root: HTMLElement): void {
   if (fromUrl.house !== undefined) initial.house = fromUrl.house;
 
   const store = createStore(initial);
+  /** The house hidden in this session, restored as-is when shown again. */
+  let lastHiddenHouse: HouseModel | null = null;
 
   // ----- Context -----
   const ctx: AppCtx = {
@@ -131,9 +133,19 @@ export function startApp(root: HTMLElement): void {
       });
     },
     setHouse: (house) => {
-      if (house === null) localStorage.removeItem(LS.house);
-      else localStorage.setItem(LS.house, encodeHouse(house));
+      saveHouse(localStorage, house);
+      lastHiddenHouse = null;
       store.set({ house });
+    },
+    toggleHouse: () => {
+      const current = store.get().house;
+      if (current === null) {
+        ctx.setHouse(houseToShow(localStorage, lastHiddenHouse));
+      } else {
+        hideHouse(localStorage);
+        lastHiddenHouse = current;
+        store.set({ house: null });
+      }
     },
     requestGps: async () => {
       const loc = await requestLocation(navigator.geolocation);

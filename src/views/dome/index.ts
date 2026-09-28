@@ -13,7 +13,6 @@ import { buildDome, labelSprite } from "./scene";
 import { buildDayPath, buildHourBeads, disposeGroup, glowSprite, toDome } from "./paths";
 import { createHouseLayer } from "./house3d";
 import type { HouseLayer } from "./house3d";
-import { clampHouse, defaultHouse } from "../../sunsim/house";
 import { encodeHouse } from "../../sunsim/houseCodec";
 import { openHouseEditor } from "./houseEditor";
 import { openHousePanel } from "./housePanel";
@@ -54,10 +53,7 @@ export function createDomeView(ctx: AppCtx): View {
     {
       type: "button",
       class: "pill house-chip",
-      onclick: () => {
-        const current = ctx.store.get().house;
-        ctx.setHouse(current === null ? clampHouse(defaultHouse()) : null);
-      },
+      onclick: () => ctx.toggleHouse(),
     },
     ctx.tr("houseChip"),
   );
@@ -244,6 +240,7 @@ export function createDomeView(ctx: AppCtx): View {
       }
       latestTime = time;
       houseChip.classList.toggle("active", s.house !== null);
+      houseChip.setAttribute("aria-pressed", String(s.house !== null));
       editChip.hidden = s.house === null;
       resultsChip.hidden = s.house === null;
       houseLayer?.update(time, s.location);
