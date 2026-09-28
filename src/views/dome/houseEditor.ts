@@ -1,12 +1,17 @@
 // Bottom-sheet editor for the parametric house model. Every committed change
 // runs through clampHouse and ctx.setHouse, so the 3D layer, URL and
 // localStorage stay in sync while the sheet is open.
+//
+// SHIG: removals run at once and offer undo (57, 54); remove buttons sit on
+// each row card's corner, away from the inputs (16, 13, 78); a value the
+// clamp adjusted says so next to the field (38, 55).
 
-import { clampHouse } from "../../sunsim/house";
+import { HOUSE_LIMITS, clampHouse, defaultHouse } from "../../sunsim/house";
 import type { HouseModel, Obstacle, WindowSpec } from "../../sunsim/house";
 import { faceAzimuth } from "../../sunsim/geometry";
 import type { AppCtx } from "../../app";
 import { closeSheet, el } from "../../ui/dom";
+import { showToast } from "../../ui/toast";
 import type { MsgKey } from "../../i18n/keys";
 
 export function openHouseEditor(ctx: AppCtx): void {
@@ -33,26 +38,81 @@ export function openHouseEditor(ctx: AppCtx): void {
     render();
   }
 
+  /** Apply a structural change right away and offer to take it back. */
+  function applyWithUndo(next: HouseModel, messageKey: MsgKey): void {
+    const before = model;
+    notes.clear(); // row indices shift, so per-field notes no longer line up
+    applyRebuild(next);
+    showToast({
+      message: ctx.tr(messageKey),
+      actionLabel: ctx.tr("undo"),
+      onAction: () => {
+        ctx.setHouse(before);
+        if (sheet.isConnected) {
+          model = before;
+          render();
+        }
+      },
+    });
+  }
+
+  /** Notes for values the clamp adjusted, keyed by field id; survive re-renders. */
+  const notes = new Map<string, string>();
+
+  interface Range {
+    lo: number;
+    hi: number;
+  }
+  const range = ([lo, hi]: readonly [number, number]): Range => ({ lo, hi });
+  const DEG: Range = { lo: 0, hi: 359 };
+
   function numField(
+    id: string,
     labelKey: MsgKey,
     value: number,
     step: number,
     onCommit: (v: number) => void,
+    limits: Range,
+    readBack: () => number | undefined,
     width = 88,
   ): HTMLElement {
     const input = el("input", {
       type: "number",
+      inputmode: "decimal",
       step: String(step),
       value: String(value),
       class: "num-input",
-      onchange: () => onCommit(Number(input.value)),
+      onchange: () => {
+        const entered = Number(input.value);
+        notes.delete(id);
+        onCommit(entered);
+        const applied = readBack();
+        if (applied !== undefined && applied !== entered) {
+          notes.set(
+            id,
+            ctx.tr("hClamped", { lo: limits.lo, hi: limits.hi, v: applied }),
+          );
+        }
+        // Structural fields re-render on commit; patch-only fields do not.
+        if (input.isConnected) renderNote();
+      },
     }) as HTMLInputElement;
     input.style.width = `${width}px`;
+    const note = el("span", { class: "field-note", role: "status" });
+    const renderNote = (): void => {
+      const text = notes.get(id);
+      note.textContent = text ?? "";
+      note.hidden = text === undefined;
+      input.setAttribute("aria-invalid", String(text !== undefined));
+      if (text !== undefined) input.value = String(readBack());
+    };
+    renderNote();
     return el(
       "label",
       { class: "num-field" },
       el("span", { class: "lbl" }, ctx.tr(labelKey)),
       input,
+      note,
     );
   }
 
@@ -80,6 +140,15 @@ export function openHouseEditor(ctx: AppCtx): void {
 
   const faceLabel = (i: 0 | 1 | 2 | 3): string => ctx.trDir(faceAzimuth(model, i));
 
+  /** 44px remove button pinned to the row card's top-right corner. */
+  function removeButton(label: string, onRemove: () => void): HTMLElement {
+    return el(
+      "button",
+      { type: "button", class: "remove-btn", "aria-label": label, title: label, onclick: onRemove },
+      ctx.tr("hRemove"),
+    );
+  }
+
   function windowRow(w: WindowSpec, idx: number): HTMLElement {
     const patch = (p: Partial<WindowSpec>): void => {
       const windows = model.windows.slice();
@@ -95,31 +164,37 @@ export function openHouseEditor(ctx: AppCtx): void {
         el("option", { value: String(f), ...(w.face === f ? { selected: true } : {}) }, faceLabel(f)),
       );
     }
+    const L = HOUSE_LIMITS;
     const num = (
       key: MsgKey,
-      value: number,
+      field: keyof Omit<WindowSpec, "face">,
       step: number,
-      commit: (v: number) => void,
-    ): HTMLElement => numField(key, value, step, commit, 64);
+      limits: readonly [number, number],
+    ): HTMLElement =>
+      numField(
+        `w${idx}:${field}`,
+        key,
+        w[field],
+        step,
+        (v) => patch({ [field]: v }),
+        range(limits),
+        () => model.windows[idx]?.[field],
+        64,
+      );
     return el(
       "div",
-      { class: "row-strip" },
+      { class: "row-strip item-card" },
       el("label", { class: "num-field" }, el("span", { class: "lbl" }, ctx.tr("hFace")), faceSel),
-      num("hWinW", w.w, 0.05, (v) => patch({ w: v })),
-      num("hWinH", w.h, 0.05, (v) => patch({ h: v })),
-      num("hSill", w.sill, 0.05, (v) => patch({ sill: v })),
-      num("hOff", w.off, 0.1, (v) => patch({ off: v })),
-      num("hShgc", w.shgc, 0.01, (v) => patch({ shgc: v })),
-      el(
-        "button",
-        {
-          type: "button",
-          class: "pill",
-          "aria-label": "remove",
-          onclick: () =>
-            applyRebuild({ ...model, windows: model.windows.filter((_, i) => i !== idx) }),
-        },
-        ctx.tr("hRemove"),
+      num("hWinW", "w", 0.05, L.windowW),
+      num("hWinH", "h", 0.05, L.windowH),
+      num("hSill", "sill", 0.05, L.sill),
+      num("hOff", "off", 0.1, L.off),
+      num("hShgc", "shgc", 0.01, L.shgc),
+      removeButton(ctx.tr("hRemoveWindow", { n: idx + 1 }), () =>
+        applyWithUndo(
+          { ...model, windows: model.windows.filter((_, i) => i !== idx) },
+          "windowRemoved",
+        ),
       ),
     );
   }
@@ -130,35 +205,51 @@ export function openHouseEditor(ctx: AppCtx): void {
       obstacles[idx] = { ...obstacles[idx], ...p };
       apply({ ...model, obstacles });
     };
+    const L = HOUSE_LIMITS;
     const num = (
       key: MsgKey,
-      value: number,
+      field: keyof Obstacle,
       step: number,
-      commit: (v: number) => void,
-    ): HTMLElement => numField(key, value, step, commit, 64);
+      limits: Range,
+    ): HTMLElement =>
+      numField(
+        `o${idx}:${field}`,
+        key,
+        o[field],
+        step,
+        (v) => patch({ [field]: v }),
+        limits,
+        () => model.obstacles[idx]?.[field],
+        64,
+      );
     return el(
       "div",
-      { class: "row-strip" },
-      num("hObsX", o.x, 0.5, (v) => patch({ x: v })),
-      num("hObsY", o.y, 0.5, (v) => patch({ y: v })),
-      num("hObsW", o.w, 0.5, (v) => patch({ w: v })),
-      num("hObsD", o.d, 0.5, (v) => patch({ d: v })),
-      num("hObsH", o.h, 0.5, (v) => patch({ h: v })),
-      num("hRot", o.rotDeg, 5, (v) => patch({ rotDeg: v })),
-      el(
-        "button",
-        {
-          type: "button",
-          class: "pill",
-          "aria-label": "remove",
-          onclick: () =>
-            applyRebuild({
-              ...model,
-              obstacles: model.obstacles.filter((_, i) => i !== idx),
-            }),
-        },
-        ctx.tr("hRemove"),
+      { class: "row-strip item-card" },
+      num("hObsX", "x", 0.5, range(L.obstacleXY)),
+      num("hObsY", "y", 0.5, range(L.obstacleXY)),
+      num("hObsW", "w", 0.5, range(L.obstacleWD)),
+      num("hObsD", "d", 0.5, range(L.obstacleWD)),
+      num("hObsH", "h", 0.5, range(L.obstacleH)),
+      num("hRot", "rotDeg", 5, DEG),
+      removeButton(ctx.tr("hRemoveObstacle", { n: idx + 1 }), () =>
+        applyWithUndo(
+          { ...model, obstacles: model.obstacles.filter((_, i) => i !== idx) },
+          "obstacleRemoved",
+        ),
       ),
+    );
+  }
+
+  type TopField = "width" | "depth" | "eaveH" | "eaveOut" | "azimuthDeg" | "albedo" | "turbidity";
+  function top(key: MsgKey, field: TopField, step: number, limits: Range): HTMLElement {
+    return numField(
+      field,
+      key,
+      model[field],
+      step,
+      (v) => applyRebuild({ ...model, [field]: v }),
+      limits,
+      () => model[field],
     );
   }
 
@@ -169,15 +260,11 @@ export function openHouseEditor(ctx: AppCtx): void {
       el(
         "div",
         { class: "row-strip" },
-        numField("hWidth", model.width, 0.1, (v) => applyRebuild({ ...model, width: v })),
-        numField("hDepth", model.depth, 0.1, (v) => applyRebuild({ ...model, depth: v })),
-        numField("hEaveH", model.eaveH, 0.1, (v) => applyRebuild({ ...model, eaveH: v })),
-        numField("hEaveOut", model.eaveOut, 0.05, (v) =>
-          applyRebuild({ ...model, eaveOut: v }),
-        ),
-        numField("hAzimuth", model.azimuthDeg, 5, (v) =>
-          applyRebuild({ ...model, azimuthDeg: v }),
-        ),
+        top("hWidth", "width", 0.1, range(HOUSE_LIMITS.width)),
+        top("hDepth", "depth", 0.1, range(HOUSE_LIMITS.depth)),
+        top("hEaveH", "eaveH", 0.1, range(HOUSE_LIMITS.eaveH)),
+        top("hEaveOut", "eaveOut", 0.05, range(HOUSE_LIMITS.eaveOut)),
+        top("hAzimuth", "azimuthDeg", 5, DEG),
       ),
     );
 
@@ -211,8 +298,14 @@ export function openHouseEditor(ctx: AppCtx): void {
       const detail = el(
         "div",
         { class: "row-strip" },
-        numField("hPitch", roof.pitchSun, 0.5, (v) =>
-          applyRebuild({ ...model, roof: { ...roof, pitchSun: v } }),
+        numField(
+          "pitch",
+          "hPitch",
+          roof.pitchSun,
+          0.5,
+          (v) => applyRebuild({ ...model, roof: { ...roof, pitchSun: v } }),
+          range(HOUSE_LIMITS.pitchSun),
+          () => (model.roof.kind === "flat" ? undefined : model.roof.pitchSun),
         ),
       );
       if (roof.kind === "gable") {
@@ -244,10 +337,8 @@ export function openHouseEditor(ctx: AppCtx): void {
       el(
         "div",
         { class: "row-strip" },
-        numField("hAlbedo", model.albedo, 0.05, (v) => applyRebuild({ ...model, albedo: v })),
-        numField("hTurbidity", model.turbidity, 0.1, (v) =>
-          applyRebuild({ ...model, turbidity: v }),
-        ),
+        top("hAlbedo", "albedo", 0.05, range(HOUSE_LIMITS.albedo)),
+        top("hTurbidity", "turbidity", 0.1, range(HOUSE_LIMITS.turbidity)),
       ),
     );
 
@@ -292,6 +383,26 @@ export function openHouseEditor(ctx: AppCtx): void {
             }),
         },
         ctx.tr("hAddObstacle"),
+      ),
+    );
+
+    // Reset lives at the very end, apart from everyday controls (16), and is
+    // undoable like any other structural change (54).
+    body.append(
+      el(
+        "div",
+        { class: "danger-zone" },
+        el(
+          "button",
+          {
+            type: "button",
+            class: "btn",
+            onclick: () => {
+              applyWithUndo(clampHouse(defaultHouse()), "houseResetDone");
+            },
+          },
+          ctx.tr("hReset"),
+        ),
       ),
     );
   }

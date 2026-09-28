@@ -183,6 +183,29 @@ export const en = {
   arCameraDenied: "Camera unavailable — showing sky gradient",
   arDragHint: "Drag to look around",
 
+  // SHIG review (2026-09)
+  undo: "Undo",
+  windowRemoved: "Window removed",
+  obstacleRemoved: "Obstacle removed",
+  hRemoveWindow: "Remove window {n}",
+  hRemoveObstacle: "Remove obstacle {n}",
+  hClamped: "Enter {lo}–{hi} (adjusted to {v})",
+  hReset: "Reset to defaults",
+  houseResetDone: "House reset to defaults",
+  defaultLocationBanner: "Showing times for Tokyo — no location set yet",
+  pickOnMap: "Pick on the map",
+  gpsLocating: "Locating…",
+  openMap: "Open the map",
+  locationChanged: "Location changed",
+  coordInputLabel: "Latitude, longitude",
+  coordInputPlaceholder: "e.g. 35.4876, 139.4061",
+  coordGo: "Go",
+  coordInvalid: "Enter “latitude, longitude” (e.g. 35.48, 139.40)",
+  locationName: "Location name",
+  locationNamePlaceholder: "e.g. Home",
+  backToNow: "Back to now",
+  scrubFirstHint: "Drag left or right to change the time",
+
   // PWA
   updateReady: "New version ready — tap to update",
 
