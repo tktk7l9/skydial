@@ -12,7 +12,6 @@ export const en = {
   tabAr: "AR",
 
   // Scrubber
-  now: "Now",
   live: "Live",
   scrubHint: "Drag to change time",
 
@@ -204,6 +203,8 @@ export const en = {
   locationName: "Location name",
   locationNamePlaceholder: "e.g. Home",
   backToNow: "Back to now",
+  scrubTickBefore: "{h}h ago",
+  scrubTickAfter: "in {h}h",
   scrubFirstHint: "Drag left or right to change the time",
 
   // PWA

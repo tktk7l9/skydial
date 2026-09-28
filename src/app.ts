@@ -37,6 +37,7 @@ import {
   formatDeg,
   formatDuration,
   formatPercent,
+  formatShortDate,
   formatTime,
   phaseNameKey,
   t,
@@ -64,6 +65,8 @@ export interface AppCtx {
   phaseKey(name: MoonPhaseName): MsgKey;
   fmtTime(d: Date, withSeconds?: boolean): string;
   fmtDate(d: Date): string;
+  /** Compact "6/21" date in the display zone. */
+  fmtShortDate(d: Date): string;
   fmtDeg(v: number): string;
   fmtDur(ms: number): string;
   fmtPct(v: number): string;
@@ -133,6 +136,7 @@ export function startApp(root: HTMLElement): void {
     fmtTime: (d, withSeconds) =>
       formatTime(d, store.get().locale, store.get().utcOffsetMin, withSeconds),
     fmtDate: (d) => formatDate(d, store.get().locale, store.get().utcOffsetMin),
+    fmtShortDate: (d) => formatShortDate(d, store.get().locale, store.get().utcOffsetMin),
     fmtDeg: (v) => formatDeg(v, store.get().locale),
     fmtDur: (ms) => formatDuration(ms, store.get().locale),
     fmtPct: (v) => formatPercent(v, store.get().locale),

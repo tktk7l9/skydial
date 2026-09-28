@@ -9,7 +9,6 @@ export const ja: Record<MsgKey, string> = {
   tabMap: "地図",
   tabAr: "AR",
 
-  now: "今",
   live: "ライブ",
   scrubHint: "ドラッグで時刻を変更",
 
@@ -187,6 +186,8 @@ export const ja: Record<MsgKey, string> = {
   locationName: "地点の名前",
   locationNamePlaceholder: "例: 自宅",
   backToNow: "今に戻る",
+  scrubTickBefore: "{h}時間前",
+  scrubTickAfter: "{h}時間後",
   scrubFirstHint: "左右にドラッグで時刻を変更",
 
   updateReady: "新しいバージョンがあります — タップで更新",

@@ -151,7 +151,8 @@ export function createDomeView(ctx: AppCtx): View {
     scene.add(pathGroup);
   }
 
-  function renderLegend(): void {
+  /** Legend day label: "today" when live on today, else the chosen date (SHIG 6, 12). */
+  function renderLegend(dayLabel: string): void {
     legend.replaceChildren();
     const item = (color: string, label: string): HTMLElement => {
       const sw = el("span", { class: "sw" });
@@ -159,13 +160,13 @@ export function createDomeView(ctx: AppCtx): View {
       return el("div", { class: "li" }, sw, el("span", {}, label));
     };
     legend.append(
-      item("#ffc266", `${ctx.tr("sun")} · ${ctx.tr("domeToday")}`),
-      item("#d6def7", `${ctx.tr("moon")} · ${ctx.tr("domeToday")}`),
+      item("#ffc266", `${ctx.tr("sun")} · ${dayLabel}`),
+      item("#d6def7", `${ctx.tr("moon")} · ${dayLabel}`),
       item("#7fd8a8", ctx.tr("domeSummerSolstice")),
       item("#8fa3e8", ctx.tr("domeWinterSolstice")),
     );
   }
-  renderLegend();
+  renderLegend(ctx.tr("domeToday"));
 
   // Render on demand: orbit interaction and state updates request frames.
   let rafId = 0;
@@ -222,6 +223,10 @@ export function createDomeView(ctx: AppCtx): View {
       if (key !== pathKey) {
         pathKey = key;
         rebuildPaths(dayStart, s.location);
+        const today = dayStartFor(new Date(), s.utcOffsetMin).getTime();
+        renderLegend(
+          dayStart.getTime() === today ? ctx.tr("domeToday") : ctx.fmtShortDate(time),
+        );
       }
 
       // House layer: rebuild when the model changes, drop when turned off.

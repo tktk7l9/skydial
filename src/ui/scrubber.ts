@@ -1,5 +1,10 @@
 // Persistent time scrubber: drag the track to move through time (3 min/px),
-// tap the date to open a picker, "Now" returns to live ticking.
+// tap the date to open a picker, "Back to now" returns to live ticking.
+//
+// SHIG 49: live-ness is a state shown as a badge next to the clock, and the
+// button only ever means one action ("Back to now"), hidden while live.
+// SHIG 4, 31: the track carries hour labels and, until the first drag, a
+// hint that it can be dragged.
 
 import type { AppState } from "../state/appState";
 import { effectiveTime } from "../state/appState";
@@ -7,13 +12,38 @@ import type { AppCtx } from "../app";
 import { el } from "./dom";
 
 const MS_PER_PX = 3 * 60 * 1000;
+const PX_PER_HOUR = 3_600_000 / MS_PER_PX;
+const TICK_HOURS = [3, 6, 9] as const;
+const HINT_KEY = "skydial:scrub-hinted";
+
+function readHinted(): boolean {
+  try {
+    return localStorage.getItem(HINT_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeHinted(): void {
+  try {
+    localStorage.setItem(HINT_KEY, "1");
+  } catch {
+    // Storage may be unavailable (private mode); the hint just shows again.
+  }
+}
 
 export function createScrubber(ctx: AppCtx): {
   root: HTMLElement;
   update(s: AppState): void;
 } {
   const dateEl = el("div", { class: "d" });
-  const timeEl = el("div", { class: "t" });
+  const timeEl = el("span", {});
+  const liveBadge = el(
+    "span",
+    { class: "live-badge" },
+    el("span", { class: "live-dot", "aria-hidden": "true" }),
+    ctx.tr("live"),
+  );
 
   // Hidden native picker, opened from the date/time display.
   const picker = el("input", {
@@ -43,8 +73,26 @@ export function createScrubber(ctx: AppCtx): {
       },
     },
     dateEl,
-    timeEl,
+    el("div", { class: "t" }, timeEl, liveBadge),
   );
+
+  // Hour labels either side of the centre line: dragging right brings the
+  // left side (the past) to the centre.
+  const labels = el("div", { class: "tick-labels" });
+  const tickEls: Array<{ node: HTMLElement; offsetPx: number }> = [];
+  for (const h of TICK_HOURS) {
+    for (const sign of [-1, 1] as const) {
+      const node = el(
+        "span",
+        { class: "tick-label" },
+        ctx.tr(sign < 0 ? "scrubTickBefore" : "scrubTickAfter", { h }),
+      );
+      labels.append(node);
+      tickEls.push({ node, offsetPx: sign * h * PX_PER_HOUR });
+    }
+  }
+  const hint = el("div", { class: "track-hint" }, ctx.tr("scrubFirstHint"));
+  hint.hidden = readHinted();
 
   // Pointer-only affordance; keyboard/AT users pick a time via the button →
   // native datetime picker instead.
@@ -52,8 +100,20 @@ export function createScrubber(ctx: AppCtx): {
     "div",
     { class: "track", "aria-hidden": "true" },
     el("div", { class: "ticks" }),
+    labels,
     el("div", { class: "centerline" }),
+    hint,
   );
+
+  const layoutTicks = (): void => {
+    const half = track.clientWidth / 2;
+    for (const { node, offsetPx } of tickEls) {
+      node.style.left = `${half + offsetPx}px`;
+      // Only show labels that fit whole inside the track.
+      node.hidden = Math.abs(offsetPx) + 28 > half;
+    }
+  };
+  new ResizeObserver(layoutTicks).observe(track);
 
   let dragBase: { x: number; time: number } | null = null;
   let pendingDx = 0;
@@ -68,6 +128,10 @@ export function createScrubber(ctx: AppCtx): {
   track.addEventListener("pointerdown", (ev) => {
     track.setPointerCapture(ev.pointerId);
     dragBase = { x: ev.clientX, time: effectiveTime(ctx.store.get()).getTime() };
+    if (!hint.hidden) {
+      hint.hidden = true;
+      writeHinted();
+    }
   });
   track.addEventListener("pointermove", (ev) => {
     if (dragBase === null) return;
@@ -88,7 +152,7 @@ export function createScrubber(ctx: AppCtx): {
       class: "now-btn",
       onclick: () => ctx.store.set({ time: null }),
     },
-    ctx.tr("now"),
+    ctx.tr("backToNow"),
   );
 
   const root = el("div", { class: "scrubber" }, datetime, picker, track, nowBtn);
@@ -97,11 +161,12 @@ export function createScrubber(ctx: AppCtx): {
     root,
     update(s) {
       const t = effectiveTime(s);
+      const live = s.time === null;
       dateEl.textContent = ctx.fmtDate(t);
       // HH:MM even while live — a seconds readout would repaint every tick.
       timeEl.textContent = ctx.fmtTime(t);
-      nowBtn.classList.toggle("live", s.time === null);
-      nowBtn.textContent = s.time === null ? ctx.tr("live") : ctx.tr("now");
+      liveBadge.hidden = !live;
+      nowBtn.hidden = live;
     },
   };
 }
