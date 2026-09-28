@@ -12,6 +12,8 @@ import { faceAzimuth } from "../../sunsim/geometry";
 import type { AppCtx } from "../../app";
 import { closeSheet, el } from "../../ui/dom";
 import { showToast } from "../../ui/toast";
+import { describeAdjustment, restoreRemoved } from "../../state/houseEdit";
+import type { RemovedItem } from "../../state/houseEdit";
 import type { MsgKey } from "../../i18n/keys";
 
 export function openHouseEditor(ctx: AppCtx): void {
@@ -38,22 +40,73 @@ export function openHouseEditor(ctx: AppCtx): void {
     render();
   }
 
-  /** Apply a structural change right away and offer to take it back. */
-  function applyWithUndo(next: HouseModel, messageKey: MsgKey): void {
-    const before = model;
+  // A field commits on blur, so rebuilding synchronously would destroy the
+  // control Tab is moving to. Rebuild after focus has settled instead; render()
+  // then puts focus back on the same control by its data-fid.
+  let renderTimer = 0;
+  function scheduleRender(): void {
+    clearTimeout(renderTimer);
+    renderTimer = window.setTimeout(() => {
+      if (sheet.isConnected) render();
+    }, 0);
+  }
+
+  /** Move focus to the first control (by data-fid) that exists. */
+  function focusFirst(fids: string[]): void {
+    for (const fid of fids) {
+      const target = body.querySelector<HTMLElement>(`[data-fid="${fid}"]`);
+      if (target !== null) {
+        target.focus();
+        // Tab selects a field's value; keep that so typing replaces it.
+        if (target instanceof HTMLInputElement) target.select();
+        return;
+      }
+    }
+  }
+
+  /**
+   * Apply a structural change right away and offer to take it back (54, 57).
+   * `undoFrom` rebuilds the pre-change model from the *current* one, so edits
+   * made while the notice is showing are not thrown away by the undo.
+   */
+  function applyWithUndo(
+    next: HouseModel,
+    messageKey: MsgKey,
+    undoFrom: (current: HouseModel) => HouseModel,
+    focusAfterUndo: string[],
+  ): void {
     notes.clear(); // row indices shift, so per-field notes no longer line up
     applyRebuild(next);
     showToast({
       message: ctx.tr(messageKey),
       actionLabel: ctx.tr("undo"),
       onAction: () => {
-        ctx.setHouse(before);
+        const restored = clampHouse(undoFrom(ctx.store.get().house ?? model));
+        ctx.setHouse(restored);
         if (sheet.isConnected) {
-          model = before;
+          model = restored;
+          notes.clear();
           render();
+          focusFirst(focusAfterUndo);
         }
       },
     });
+  }
+
+  function removeItem(removed: RemovedItem): void {
+    const { kind, index } = removed;
+    const p = kind === "window" ? "w" : "o";
+    applyWithUndo(
+      kind === "window"
+        ? { ...model, windows: model.windows.filter((_, i) => i !== index) }
+        : { ...model, obstacles: model.obstacles.filter((_, i) => i !== index) },
+      kind === "window" ? "windowRemoved" : "obstacleRemoved",
+      (current) => restoreRemoved(current, removed),
+      [`rm-${p}${index}`],
+    );
+    // Keep keyboard users in place: the next row's remove button, else the
+    // previous one, else the "add" button of that list.
+    focusFirst([`rm-${p}${index}`, `rm-${p}${index - 1}`, `add-${p}`]);
   }
 
   /** Notes for values the clamp adjusted, keyed by field id; survive re-renders. */
@@ -82,21 +135,21 @@ export function openHouseEditor(ctx: AppCtx): void {
       step: String(step),
       value: String(value),
       class: "num-input",
+      "data-fid": id,
       onchange: () => {
-        const entered = Number(input.value);
+        // An emptied field means "no value", not 0.
+        const entered = input.value.trim() === "" ? Number.NaN : Number(input.value);
         notes.delete(id);
         onCommit(entered);
         const applied = readBack();
-        if (applied !== undefined && applied !== entered) {
-          notes.set(
-            id,
-            ctx.tr("hClamped", { lo: limits.lo, hi: limits.hi, v: applied }),
-          );
+        const adjustment =
+          applied === undefined ? null : describeAdjustment(entered, applied, limits.lo, limits.hi);
+        if (adjustment === "range") {
+          notes.set(id, ctx.tr("hClamped", { lo: limits.lo, hi: limits.hi, v: applied ?? "" }));
+        } else if (adjustment === "rounded") {
+          notes.set(id, ctx.tr("hRounded", { v: applied ?? "" }));
         }
-        // Patch-only fields keep their input; structural fields were rebuilt
-        // by onCommit before the note existed, so rebuild once more.
-        if (input.isConnected) renderNote();
-        else render();
+        renderNote();
       },
     }) as HTMLInputElement;
     input.style.width = `${width}px`;
@@ -119,6 +172,7 @@ export function openHouseEditor(ctx: AppCtx): void {
   }
 
   function pills<T extends string | number>(
+    fid: string,
     current: T,
     choices: Array<{ value: T; label: string }>,
     onPick: (v: T) => void,
@@ -130,6 +184,8 @@ export function openHouseEditor(ctx: AppCtx): void {
           "button",
           {
             type: "button",
+            "data-fid": `${fid}:${c.value}`,
+            "aria-pressed": String(c.value === current),
             class: `pill${c.value === current ? " active" : ""}`,
             onclick: () => onPick(c.value),
           },
@@ -143,10 +199,17 @@ export function openHouseEditor(ctx: AppCtx): void {
   const faceLabel = (i: 0 | 1 | 2 | 3): string => ctx.trDir(faceAzimuth(model, i));
 
   /** 44px remove button pinned to the row card's top-right corner. */
-  function removeButton(label: string, onRemove: () => void): HTMLElement {
+  function removeButton(fid: string, label: string, onRemove: () => void): HTMLElement {
     return el(
       "button",
-      { type: "button", class: "remove-btn", "aria-label": label, title: label, onclick: onRemove },
+      {
+        type: "button",
+        class: "remove-btn",
+        "data-fid": fid,
+        "aria-label": label,
+        title: label,
+        onclick: onRemove,
+      },
       ctx.tr("hRemove"),
     );
   }
@@ -159,6 +222,8 @@ export function openHouseEditor(ctx: AppCtx): void {
     };
     const faceSel = el("select", {
       class: "num-input",
+      "data-fid": `w${idx}:face`,
+      "aria-label": ctx.tr("hFace"),
       onchange: () => patch({ face: Number(faceSel.value) as 0 | 1 | 2 | 3 }),
     }) as HTMLSelectElement;
     for (const f of [0, 1, 2, 3] as const) {
@@ -192,11 +257,8 @@ export function openHouseEditor(ctx: AppCtx): void {
       num("hSill", "sill", 0.05, L.sill),
       num("hOff", "off", 0.1, L.off),
       num("hShgc", "shgc", 0.01, L.shgc),
-      removeButton(ctx.tr("hRemoveWindow", { n: idx + 1 }), () =>
-        applyWithUndo(
-          { ...model, windows: model.windows.filter((_, i) => i !== idx) },
-          "windowRemoved",
-        ),
+      removeButton(`rm-w${idx}`, ctx.tr("hRemoveWindow", { n: idx + 1 }), () =>
+        removeItem({ kind: "window", index: idx, item: w }),
       ),
     );
   }
@@ -233,11 +295,8 @@ export function openHouseEditor(ctx: AppCtx): void {
       num("hObsD", "d", 0.5, range(L.obstacleWD)),
       num("hObsH", "h", 0.5, range(L.obstacleH)),
       num("hRot", "rotDeg", 5, DEG),
-      removeButton(ctx.tr("hRemoveObstacle", { n: idx + 1 }), () =>
-        applyWithUndo(
-          { ...model, obstacles: model.obstacles.filter((_, i) => i !== idx) },
-          "obstacleRemoved",
-        ),
+      removeButton(`rm-o${idx}`, ctx.tr("hRemoveObstacle", { n: idx + 1 }), () =>
+        removeItem({ kind: "obstacle", index: idx, item: o }),
       ),
     );
   }
@@ -249,13 +308,19 @@ export function openHouseEditor(ctx: AppCtx): void {
       key,
       model[field],
       step,
-      (v) => applyRebuild({ ...model, [field]: v }),
+      (v) => {
+        apply({ ...model, [field]: v });
+        scheduleRender(); // azimuth relabels the window faces
+      },
       limits,
       () => model[field],
     );
   }
 
   function render(): void {
+    const active = document.activeElement;
+    const keepFocus =
+      active instanceof HTMLElement && body.contains(active) ? active.dataset.fid : undefined;
     body.replaceChildren();
 
     body.append(
@@ -276,6 +341,7 @@ export function openHouseEditor(ctx: AppCtx): void {
       { class: "setting-row" },
       el("span", { class: "lbl" }, ctx.tr("hRoof")),
       pills(
+        "roof",
         model.roof.kind,
         [
           { value: "flat" as const, label: ctx.tr("roofFlat") },
@@ -305,7 +371,10 @@ export function openHouseEditor(ctx: AppCtx): void {
           "hPitch",
           roof.pitchSun,
           0.5,
-          (v) => applyRebuild({ ...model, roof: { ...roof, pitchSun: v } }),
+          (v) => {
+            apply({ ...model, roof: { ...roof, pitchSun: v } });
+            scheduleRender();
+          },
           range(HOUSE_LIMITS.pitchSun),
           () => (model.roof.kind === "flat" ? undefined : model.roof.pitchSun),
         ),
@@ -314,6 +383,7 @@ export function openHouseEditor(ctx: AppCtx): void {
         detail.append(
           el("span", { class: "lbl" }, ctx.tr("hRidgeAxis")),
           pills(
+            "ridge",
             roof.ridgeAxis,
             [
               { value: "w" as const, label: ctx.tr("ridgeW") },
@@ -326,6 +396,7 @@ export function openHouseEditor(ctx: AppCtx): void {
         detail.append(
           el("span", { class: "lbl" }, ctx.tr("hLowSide")),
           pills(
+            "low",
             roof.lowSide,
             ([0, 1, 2, 3] as const).map((f) => ({ value: f, label: faceLabel(f) })),
             (lowSide) => applyRebuild({ ...model, roof: { ...roof, lowSide } }),
@@ -353,6 +424,8 @@ export function openHouseEditor(ctx: AppCtx): void {
         {
           type: "button",
           class: "btn",
+          "data-fid": "add-w",
+          disabled: model.windows.length >= HOUSE_LIMITS.maxWindows,
           onclick: () =>
             applyRebuild({
               ...model,
@@ -375,6 +448,8 @@ export function openHouseEditor(ctx: AppCtx): void {
         {
           type: "button",
           class: "btn",
+          "data-fid": "add-o",
+          disabled: model.obstacles.length >= HOUSE_LIMITS.maxObstacles,
           onclick: () =>
             applyRebuild({
               ...model,
@@ -399,14 +474,20 @@ export function openHouseEditor(ctx: AppCtx): void {
           {
             type: "button",
             class: "btn",
+            "data-fid": "reset",
             onclick: () => {
-              applyWithUndo(clampHouse(defaultHouse()), "houseResetDone");
+              const before = model;
+              applyWithUndo(clampHouse(defaultHouse()), "houseResetDone", () => before, [
+                "reset",
+              ]);
             },
           },
           ctx.tr("hReset"),
         ),
       ),
     );
+
+    if (keepFocus !== undefined) focusFirst([keepFocus]);
   }
 
   sheet.append(el("h2", {}, ctx.tr("houseEditTitle")), body);

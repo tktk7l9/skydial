@@ -2,6 +2,7 @@
 // fully testable in node (and the UI can pass the real ones).
 
 import type { GeoLocation } from "../astro/types";
+import { normalizeLocationName } from "./locationInput";
 
 const STORAGE_KEY = "skydial:location";
 const NAME_KEY = "skydial:location-name";
@@ -73,4 +74,24 @@ export function saveLocationName(
 
 export function loadLocationName(storage: Pick<Storage, "getItem">): string | null {
   return storage.getItem(NAME_KEY);
+}
+
+/**
+ * Name the current location ("Home"; blank clears it) and return the state
+ * patch. A name is only reloaded together with a saved location, so naming
+ * the default place adopts it as the user's own; otherwise the name would
+ * silently vanish on the next launch.
+ */
+export function nameLocation(
+  storage: StorageLike & Pick<Storage, "removeItem">,
+  current: { location: GeoLocation; locationSource: "default" | "gps" | "manual" },
+  raw: string,
+): { locationName: string | null; locationSource: "default" | "gps" | "manual" } {
+  const name = normalizeLocationName(raw);
+  saveLocationName(storage, name);
+  if (name !== null && current.locationSource === "default") {
+    saveLocation(storage, current.location);
+    return { locationName: name, locationSource: "manual" };
+  }
+  return { locationName: name, locationSource: current.locationSource };
 }

@@ -135,7 +135,11 @@ export function openSettings(ctx: AppCtx, animate = true): void {
     placeholder: ctx.tr("locationNamePlaceholder"),
     maxlength: "40",
     autocomplete: "off",
-    onchange: () => ctx.setLocationName(nameInput.value),
+    onchange: () => {
+      ctx.setLocationName(nameInput.value);
+      // Show what was actually kept (trimmed, capped) rather than the raw entry.
+      nameInput.value = ctx.store.get().locationName ?? "";
+    },
   }) as HTMLInputElement;
   const nameRow = el(
     "label",

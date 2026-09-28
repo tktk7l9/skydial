@@ -20,11 +20,11 @@ import {
   clearSavedLocation,
   loadLocationName,
   loadSavedLocation,
+  nameLocation,
   requestLocation,
   saveLocation,
   saveLocationName,
 } from "./state/geolocation";
-import { normalizeLocationName } from "./state/locationInput";
 import { autoUtcOffsetMin, deviceUtcOffsetMin } from "./state/tzEstimate";
 import { decodeUrlState, encodeUrlState } from "./state/urlState";
 import type { GeoLocation } from "./astro/types";
@@ -173,9 +173,7 @@ export function startApp(root: HTMLElement): void {
       store.set({ ...snap });
     },
     setLocationName: (raw) => {
-      const name = normalizeLocationName(raw);
-      saveLocationName(localStorage, name);
-      store.set({ locationName: name });
+      store.set(nameLocation(localStorage, store.get(), raw));
     },
     setHouse: (house) => {
       saveHouse(localStorage, house);

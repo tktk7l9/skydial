@@ -109,7 +109,7 @@ export const ja: Record<MsgKey, string> = {
   hEaveOut: "軒の出",
   hAzimuth: "正面の方位",
   hAlbedo: "地面反射率",
-  hTurbidity: "大気の濁りTL",
+  hTurbidity: "大気のかすみ",
   hWindows: "窓",
   hAddWindow: "+ 窓",
   hObstacles: "隣家・障害物",
@@ -120,7 +120,7 @@ export const ja: Record<MsgKey, string> = {
   hWinH: "高さ",
   hSill: "腰高",
   hOff: "左から",
-  hShgc: "η",
+  hShgc: "日射取得率",
   hObsX: "東(+)/西(−)",
   hObsY: "北(+)/南(−)",
   hObsW: "幅",
@@ -138,7 +138,7 @@ export const ja: Record<MsgKey, string> = {
   resRoomHours: "室内日照",
   resNoFloorPatch: "床に日射パッチなし(遮蔽されているか、光線が低く床まで届きません)",
   houseNote:
-    "快晴(Ineichen–Perez・TL可変)前提の概算です。ηは一定・地面反射の遮蔽は未考慮 — 実際の天候では下回ります。",
+    "快晴を前提にした概算です(Ineichen–Perez モデル・大気のかすみは調整可)。日射取得率は一定・地面反射の遮蔽は未考慮 — 実際の天候では下回ります。",
   houseInteriorNote:
     "床の日向パッチは簡略化した表現です。建物全体を1部屋として扱い、床に届く前に奥の壁に当たってしまうような低い光線は「床に届かない」として扱います。",
 
@@ -172,6 +172,7 @@ export const ja: Record<MsgKey, string> = {
   hRemoveWindow: "窓{n}を削除",
   hRemoveObstacle: "障害物{n}を削除",
   hClamped: "{lo}〜{hi} の範囲で入力してください({v} に調整しました)",
+  hRounded: "{v} に丸めました",
   hReset: "初期値に戻す",
   houseResetDone: "家の設定を初期値に戻しました",
   defaultLocationBanner: "東京の時刻を表示しています(地点が未設定です)",
