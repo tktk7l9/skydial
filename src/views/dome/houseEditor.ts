@@ -93,8 +93,10 @@ export function openHouseEditor(ctx: AppCtx): void {
             ctx.tr("hClamped", { lo: limits.lo, hi: limits.hi, v: applied }),
           );
         }
-        // Structural fields re-render on commit; patch-only fields do not.
+        // Patch-only fields keep their input; structural fields were rebuilt
+        // by onCommit before the note existed, so rebuild once more.
         if (input.isConnected) renderNote();
+        else render();
       },
     }) as HTMLInputElement;
     input.style.width = `${width}px`;

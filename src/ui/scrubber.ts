@@ -13,7 +13,7 @@ import { el } from "./dom";
 
 const MS_PER_PX = 3 * 60 * 1000;
 const PX_PER_HOUR = 3_600_000 / MS_PER_PX;
-const TICK_HOURS = [3, 6, 9] as const;
+const TICK_HOURS = [2, 6, 10] as const;
 const HINT_KEY = "skydial:scrub-hinted";
 
 function readHinted(): boolean {
@@ -93,6 +93,8 @@ export function createScrubber(ctx: AppCtx): {
   }
   const hint = el("div", { class: "track-hint" }, ctx.tr("scrubFirstHint"));
   hint.hidden = readHinted();
+  // The hint covers the track; its labels come in once it is dismissed.
+  labels.hidden = !hint.hidden;
 
   // Pointer-only affordance; keyboard/AT users pick a time via the button →
   // native datetime picker instead.
@@ -110,7 +112,8 @@ export function createScrubber(ctx: AppCtx): {
     for (const { node, offsetPx } of tickEls) {
       node.style.left = `${half + offsetPx}px`;
       // Only show labels that fit whole inside the track.
-      node.hidden = Math.abs(offsetPx) + 28 > half;
+      node.hidden = false;
+      node.hidden = Math.abs(offsetPx) + node.offsetWidth / 2 + 2 > half;
     }
   };
   new ResizeObserver(layoutTicks).observe(track);
@@ -130,7 +133,9 @@ export function createScrubber(ctx: AppCtx): {
     dragBase = { x: ev.clientX, time: effectiveTime(ctx.store.get()).getTime() };
     if (!hint.hidden) {
       hint.hidden = true;
+      labels.hidden = false;
       writeHinted();
+      layoutTicks();
     }
   });
   track.addEventListener("pointermove", (ev) => {
