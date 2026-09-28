@@ -4,6 +4,7 @@
 import type { GeoLocation } from "../astro/types";
 
 const STORAGE_KEY = "skydial:location";
+const NAME_KEY = "skydial:location-name";
 
 export interface GeoProviderLike {
   getCurrentPosition(
@@ -53,4 +54,23 @@ export function loadSavedLocation(storage: Pick<Storage, "getItem">): GeoLocatio
     // fall through — corrupt storage is treated as absent
   }
   return null;
+}
+
+/** Forget the saved location (and its name), e.g. when undoing a first pick. */
+export function clearSavedLocation(storage: Pick<Storage, "removeItem">): void {
+  storage.removeItem(STORAGE_KEY);
+  storage.removeItem(NAME_KEY);
+}
+
+/** Persist the user's name for the current location; null removes it. */
+export function saveLocationName(
+  storage: Pick<Storage, "setItem" | "removeItem">,
+  name: string | null,
+): void {
+  if (name === null) storage.removeItem(NAME_KEY);
+  else storage.setItem(NAME_KEY, name);
+}
+
+export function loadLocationName(storage: Pick<Storage, "getItem">): string | null {
+  return storage.getItem(NAME_KEY);
 }

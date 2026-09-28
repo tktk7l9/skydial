@@ -1002,3 +1002,92 @@ select.num-input {
   font-weight: 700;
   font-size: 13.5px;
 }
+
+/* ===== Location set-up (SHIG 32, 42, 55, 58, 66) ===== */
+
+.loc-banner[hidden] {
+  display: none;
+}
+
+.loc-banner-msg {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.loc-banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.gps-control {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.gps-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.gps-status[hidden] {
+  display: none;
+}
+
+.link-btn {
+  min-height: var(--tap);
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: inherit;
+  font-weight: 700;
+  font-size: 12.5px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.name-input {
+  width: 180px;
+}
+
+.coord-form {
+  position: absolute;
+  left: 10px;
+  right: 60px;
+  bottom: 24px;
+  z-index: 800;
+  max-width: 380px;
+}
+
+.coord-row {
+  display: flex;
+  gap: 6px;
+}
+
+.coord-input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--tap);
+}
+
+.coord-error {
+  margin: 0 0 6px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: rgb(0 0 0 / 70%);
+  color: #fff;
+  font-size: 12px;
+}
+
+.coord-error[hidden] {
+  display: none;
+}

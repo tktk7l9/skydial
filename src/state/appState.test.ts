@@ -1,4 +1,10 @@
-import { DEFAULT_LOCATION, createStore, defaultState, effectiveTime } from "./appState";
+import {
+  DEFAULT_LOCATION,
+  createStore,
+  defaultState,
+  effectiveTime,
+  locationSnapshot,
+} from "./appState";
 
 describe("appState", () => {
   it("defaultState starts live at the default location", () => {
@@ -9,6 +15,8 @@ describe("appState", () => {
     expect(s.locale).toBe("ja");
     expect(s.theme).toBe("auto");
     expect(s.utcOffsetMin).toBeNull();
+    expect(s.locationSource).toBe("default");
+    expect(s.locationName).toBeNull();
   });
 
   it("set patches state and notifies subscribers", () => {
@@ -24,6 +32,23 @@ describe("appState", () => {
     unsub();
     store.set({ tab: "ar" });
     expect(seen).toEqual(["dome", "map"]); // no longer notified
+  });
+
+  it("locationSnapshot captures only the location fields, for undo", () => {
+    const s = {
+      ...defaultState("ja"),
+      location: { lat: 1, lng: 2 },
+      locationSource: "manual" as const,
+      locationName: "Home",
+      utcOffsetMin: 540,
+      tab: "map" as const,
+    };
+    expect(locationSnapshot(s)).toEqual({
+      location: { lat: 1, lng: 2 },
+      locationSource: "manual",
+      locationName: "Home",
+      utcOffsetMin: 540,
+    });
   });
 
   it("effectiveTime returns the scrubbed instant, or now when live", () => {

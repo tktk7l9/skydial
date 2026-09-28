@@ -1,4 +1,11 @@
-import { loadSavedLocation, requestLocation, saveLocation } from "./geolocation";
+import {
+  clearSavedLocation,
+  loadLocationName,
+  loadSavedLocation,
+  requestLocation,
+  saveLocation,
+  saveLocationName,
+} from "./geolocation";
 
 function memoryStorage(initial: Record<string, string> = {}): {
   getItem(k: string): string | null;
@@ -51,5 +58,37 @@ describe("geolocation", () => {
     expect(
       loadSavedLocation(memoryStorage({ "skydial:location": "null" })),
     ).toBeNull();
+  });
+});
+
+describe("saved location extras", () => {
+  function fullStorage(initial: Record<string, string> = {}): Pick<
+    Storage,
+    "getItem" | "setItem" | "removeItem"
+  > {
+    const map = new Map(Object.entries(initial));
+    return {
+      getItem: (k) => map.get(k) ?? null,
+      setItem: (k, v) => void map.set(k, v),
+      removeItem: (k) => void map.delete(k),
+    };
+  }
+
+  it("clearSavedLocation forgets the location and its name", () => {
+    const storage = fullStorage();
+    saveLocation(storage, { lat: 1, lng: 2 });
+    saveLocationName(storage, "Home");
+    clearSavedLocation(storage);
+    expect(loadSavedLocation(storage)).toBeNull();
+    expect(loadLocationName(storage)).toBeNull();
+  });
+
+  it("saves, loads and removes a location name", () => {
+    const storage = fullStorage();
+    expect(loadLocationName(storage)).toBeNull();
+    saveLocationName(storage, "自宅");
+    expect(loadLocationName(storage)).toBe("自宅");
+    saveLocationName(storage, null);
+    expect(loadLocationName(storage)).toBeNull();
   });
 });

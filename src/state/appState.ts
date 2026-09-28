@@ -12,6 +12,8 @@ export type TileLayer = "osm" | "gsi";
 export interface AppState {
   location: GeoLocation;
   locationSource: "default" | "gps" | "manual";
+  /** The user's own name for the location ("Home"); null = show coordinates. */
+  locationName: string | null;
   /** Selected instant; null = live ("now", ticking). */
   time: Date | null;
   tab: Tab;
@@ -31,6 +33,7 @@ export function defaultState(locale: Locale): AppState {
   return {
     location: DEFAULT_LOCATION,
     locationSource: "default",
+    locationName: null,
     time: null,
     tab: "dashboard",
     locale,
@@ -62,6 +65,21 @@ export function createStore(initial: AppState): Store {
       listeners.add(fn);
       return () => listeners.delete(fn);
     },
+  };
+}
+
+/** Everything that describes "where": captured before a change so it can be undone. */
+export type LocationSnapshot = Pick<
+  AppState,
+  "location" | "locationSource" | "locationName" | "utcOffsetMin"
+>;
+
+export function locationSnapshot(s: AppState): LocationSnapshot {
+  return {
+    location: s.location,
+    locationSource: s.locationSource,
+    locationName: s.locationName,
+    utcOffsetMin: s.utcOffsetMin,
   };
 }
 

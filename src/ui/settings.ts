@@ -3,6 +3,7 @@
 import type { Locale, Theme, TileLayer } from "../state/appState";
 import type { AppCtx } from "../app";
 import { closeSheet, el } from "./dom";
+import { createGpsControl } from "./gpsControl";
 
 const UTC_CHOICES: ReadonlyArray<number> = [-480, -300, 0, 60, 330, 480, 540, 600];
 
@@ -114,17 +115,7 @@ export function openSettings(ctx: AppCtx, animate = true): void {
     ),
   );
 
-  const gpsBtn = el(
-    "button",
-    {
-      type: "button",
-      class: "btn primary",
-      onclick: () => {
-        void ctx.requestGps().then(close);
-      },
-    },
-    ctx.tr("useGps"),
-  );
+  const gpsControl = createGpsControl(ctx, { onLocated: close, onOpenMap: close });
   const locLine = el(
     "div",
     { class: "setting-row" },
@@ -134,9 +125,25 @@ export function openSettings(ctx: AppCtx, animate = true): void {
       `${ctx.tr("location")}: ${s.location.lat.toFixed(4)}, ${s.location.lng.toFixed(4)}` +
         (s.locationSource === "manual" ? ` (${ctx.tr("manualLocation")})` : ""),
     ),
-    gpsBtn,
+    gpsControl,
   );
-  sheet.append(locLine, el("p", { class: "footnote" }, ctx.tr("accuracyNote")));
+  // A name of the user's own ("Home") replaces raw coordinates in the header.
+  const nameInput = el("input", {
+    type: "text",
+    class: "num-input name-input",
+    value: s.locationName ?? "",
+    placeholder: ctx.tr("locationNamePlaceholder"),
+    maxlength: "40",
+    autocomplete: "off",
+    onchange: () => ctx.setLocationName(nameInput.value),
+  }) as HTMLInputElement;
+  const nameRow = el(
+    "label",
+    { class: "setting-row" },
+    el("span", { class: "lbl" }, ctx.tr("locationName")),
+    nameInput,
+  );
+  sheet.append(locLine, nameRow, el("p", { class: "footnote" }, ctx.tr("accuracyNote")));
 
   document.body.append(backdrop, sheet);
 }
