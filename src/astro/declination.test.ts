@@ -6,7 +6,7 @@ describe("declinationWestDeg (GSI 2020.0 approximation)", () => {
   });
 
   it("Tokyo is ~7.9°W, Sapporo ~9.3°W, Naha ~5.4°W (GSI chart values ±0.5°)", () => {
-    // 磁気図2020.0の代表値と突合(市街の代表点)。
+    // Cross-checked against representative values from the 2020.0 magnetic chart (representative city points).
     expect(declinationWestDeg({ lat: 35.68, lng: 139.77 })).toBeCloseTo(7.9, 0);
     const sapporo = declinationWestDeg({ lat: 43.06, lng: 141.35 });
     expect(sapporo).toBeGreaterThan(8.7);

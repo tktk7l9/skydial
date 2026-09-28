@@ -135,8 +135,8 @@ export function clampHouse(m: HouseModel): HouseModel {
 /** Representative starter model: south-facing single-story gable. */
 export function defaultHouse(): HouseModel {
   return {
-    width: 10.92, // 6間
-    depth: 9.1, // 5間
+    width: 10.92, // 6 ken (間)
+    depth: 9.1, // 5 ken (間)
     eaveH: 2.9,
     roof: { kind: "gable", pitchSun: 4, ridgeAxis: "w" },
     eaveOut: 0.6,
@@ -145,9 +145,9 @@ export function defaultHouse(): HouseModel {
     turbidity: 3,
     elevationM: 0,
     windows: [
-      { face: 0, w: 1.69, h: 2.0, sill: 0.05, off: 1.2, shgc: 0.6 }, // 掃き出し
+      { face: 0, w: 1.69, h: 2.0, sill: 0.05, off: 1.2, shgc: 0.6 }, // floor-level sliding window (掃き出し窓)
       { face: 0, w: 1.69, h: 2.0, sill: 0.05, off: 4.2, shgc: 0.6 },
-      { face: 0, w: 1.65, h: 1.1, sill: 0.9, off: 7.8, shgc: 0.6 }, // 腰窓
+      { face: 0, w: 1.65, h: 1.1, sill: 0.9, off: 7.8, shgc: 0.6 }, // waist-height window (腰窓)
       { face: 1, w: 1.19, h: 1.1, sill: 0.9, off: 3.0, shgc: 0.6 },
       { face: 3, w: 0.6, h: 1.1, sill: 0.9, off: 2.0, shgc: 0.6 },
       { face: 2, w: 0.6, h: 0.9, sill: 1.1, off: 2.0, shgc: 0.6 },
