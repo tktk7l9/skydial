@@ -9,7 +9,6 @@ export const ja: Record<MsgKey, string> = {
   tabMap: "地図",
   tabAr: "AR",
 
-  now: "今",
   live: "ライブ",
   scrubHint: "ドラッグで時刻を変更",
 
@@ -110,7 +109,7 @@ export const ja: Record<MsgKey, string> = {
   hEaveOut: "軒の出",
   hAzimuth: "正面の方位",
   hAlbedo: "地面反射率",
-  hTurbidity: "大気の濁りTL",
+  hTurbidity: "大気のかすみ",
   hWindows: "窓",
   hAddWindow: "+ 窓",
   hObstacles: "隣家・障害物",
@@ -121,7 +120,7 @@ export const ja: Record<MsgKey, string> = {
   hWinH: "高さ",
   hSill: "腰高",
   hOff: "左から",
-  hShgc: "η",
+  hShgc: "日射取得率",
   hObsX: "東(+)/西(−)",
   hObsY: "北(+)/南(−)",
   hObsW: "幅",
@@ -139,7 +138,7 @@ export const ja: Record<MsgKey, string> = {
   resRoomHours: "室内日照",
   resNoFloorPatch: "床に日射パッチなし(遮蔽されているか、光線が低く床まで届きません)",
   houseNote:
-    "快晴(Ineichen–Perez・TL可変)前提の概算です。ηは一定・地面反射の遮蔽は未考慮 — 実際の天候では下回ります。",
+    "快晴を前提にした概算です(Ineichen–Perez モデル・大気のかすみは調整可)。日射取得率は一定・地面反射の遮蔽は未考慮 — 実際の天候では下回ります。",
   houseInteriorNote:
     "床の日向パッチは簡略化した表現です。建物全体を1部屋として扱い、床に届く前に奥の壁に当たってしまうような低い光線は「床に届かない」として扱います。",
 
@@ -165,6 +164,32 @@ export const ja: Record<MsgKey, string> = {
   arSensorDenied: "センサーが使えません — ドラッグで見回してください",
   arCameraDenied: "カメラが使えません — 空のグラデーションを表示します",
   arDragHint: "ドラッグで見回す",
+
+  // SHIG review (2026-09)
+  undo: "元に戻す",
+  windowRemoved: "窓を削除しました",
+  obstacleRemoved: "障害物を削除しました",
+  hRemoveWindow: "窓{n}を削除",
+  hRemoveObstacle: "障害物{n}を削除",
+  hClamped: "{lo}〜{hi} の範囲で入力してください({v} に調整しました)",
+  hRounded: "{v} に丸めました",
+  hReset: "初期値に戻す",
+  houseResetDone: "家の設定を初期値に戻しました",
+  defaultLocationBanner: "東京の時刻を表示しています(地点が未設定です)",
+  pickOnMap: "地図で選ぶ",
+  gpsLocating: "取得中…",
+  openMap: "地図を開く",
+  locationChanged: "地点を変更しました",
+  coordInputLabel: "緯度, 経度",
+  coordInputPlaceholder: "例: 35.4876, 139.4061",
+  coordGo: "移動",
+  coordInvalid: "「緯度, 経度」の形で入力してください(例: 35.48, 139.40)",
+  locationName: "地点の名前",
+  locationNamePlaceholder: "例: 自宅",
+  backToNow: "今に戻る",
+  scrubTickBefore: "{h}時間前",
+  scrubTickAfter: "{h}時間後",
+  scrubFirstHint: "左右にドラッグで時刻を変更",
 
   updateReady: "新しいバージョンがあります — タップで更新",
 

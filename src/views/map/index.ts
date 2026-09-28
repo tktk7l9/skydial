@@ -11,7 +11,10 @@ import type { GeoLocation } from "../../astro/types";
 import { dayStartFor } from "../../state/dayWindow";
 import type { AppState, TileLayer } from "../../state/appState";
 import type { AppCtx, View } from "../../app";
+import { locationSnapshot } from "../../state/appState";
+import { parseLatLng } from "../../state/locationInput";
 import { el } from "../../ui/dom";
+import { showToast } from "../../ui/toast";
 import { rayLine } from "./rays";
 
 const RAY_KM = 150;
@@ -41,7 +44,58 @@ const PIN_SVG =
 export function createMapView(ctx: AppCtx): View {
   const host = el("div", { class: "leaflet-host" });
   const legend = el("div", { class: "legend" });
-  const root = el("div", { class: "view-fill" }, host, legend);
+  // Coordinates can be typed or pasted in any common spelling (SHIG 50, 51).
+  // Place-name search would need an external geocoder, which the strict CSP
+  // deliberately does not allow, so this starts with coordinates only.
+  const coordInput = el("input", {
+    type: "text",
+    class: "num-input coord-input",
+    inputmode: "decimal",
+    autocomplete: "off",
+    placeholder: ctx.tr("coordInputPlaceholder"),
+    "aria-label": ctx.tr("coordInputLabel"),
+  }) as HTMLInputElement;
+  const coordError = el("p", { class: "coord-error", role: "status", "aria-live": "polite" });
+  coordError.hidden = true;
+  const coordForm = el(
+    "form",
+    {
+      class: "coord-form",
+      onsubmit: (ev: Event) => {
+        ev.preventDefault();
+        const loc = parseLatLng(coordInput.value);
+        if (loc === null) {
+          coordError.textContent = ctx.tr("coordInvalid");
+          coordError.hidden = false;
+          coordInput.setAttribute("aria-invalid", "true");
+          return;
+        }
+        coordError.hidden = true;
+        coordInput.removeAttribute("aria-invalid");
+        coordInput.value = "";
+        moveWithUndo(loc);
+      },
+    },
+    coordError,
+    el(
+      "div",
+      { class: "coord-row" },
+      coordInput,
+      el("button", { type: "submit", class: "btn primary" }, ctx.tr("coordGo")),
+    ),
+  );
+  const root = el("div", { class: "view-fill" }, host, legend, coordForm);
+
+  /** Move the location right away; a stray tap is one "Undo" away (15, 54, 57). */
+  function moveWithUndo(loc: GeoLocation): void {
+    const before = locationSnapshot(ctx.store.get());
+    ctx.setLocation(loc, "manual");
+    showToast({
+      message: ctx.tr("locationChanged"),
+      actionLabel: ctx.tr("undo"),
+      onAction: () => ctx.restoreLocation(before),
+    });
+  }
 
   const item = (color: string, label: string): HTMLElement => {
     const sw = el("span", { class: "sw" });
@@ -84,8 +138,7 @@ export function createMapView(ctx: AppCtx): View {
   const moonsetRay = mkLine(COLORS.moonset, true);
 
   map.on("click", (ev: L.LeafletMouseEvent) => {
-    const loc: GeoLocation = { lat: ev.latlng.lat, lng: ev.latlng.lng };
-    ctx.setLocation(loc, "manual");
+    moveWithUndo({ lat: ev.latlng.lat, lng: ev.latlng.lng });
   });
 
   const observer = new ResizeObserver(() => map.invalidateSize());

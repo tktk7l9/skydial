@@ -5,6 +5,7 @@ import {
   formatDeg,
   formatDuration,
   formatPercent,
+  formatShortDate,
   formatTime,
   phaseNameKey,
   t,
@@ -93,6 +94,15 @@ describe("formatters", () => {
     expect(formatDate(d, "en", null)).toContain("2026");
     // +15h offset pushes into July 8.
     expect(formatDate(d, "en", 900)).toContain("8");
+  });
+
+  it("formatShortDate gives a compact month/day in the requested zone", () => {
+    const june21 = new Date("2026-06-21T03:00:00Z");
+    expect(formatShortDate(june21, "ja", 540)).toBe("6/21");
+    expect(formatShortDate(june21, "en", 540)).toBe("6/21");
+    // −5h offset is still June 20 locally.
+    expect(formatShortDate(june21, "en", -300)).toBe("6/20");
+    expect(formatShortDate(june21, "en", null)).toMatch(/^6\/2[01]$/);
   });
 
   it("formatDeg / formatDuration / formatPercent", () => {

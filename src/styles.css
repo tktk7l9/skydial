@@ -485,6 +485,8 @@ main.content.wide > * {
   overflow: hidden;
   touch-action: pan-y;
   cursor: ew-resize;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .scrubber .track .ticks {
@@ -520,10 +522,71 @@ main.content.wide > * {
   color: var(--text-dim);
 }
 
-.scrubber .now-btn.live {
-  color: #0b1026;
-  background: var(--accent-sun);
-  border-color: transparent;
+.scrubber .now-btn[hidden] {
+  display: none;
+}
+
+.scrubber .datetime .t {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Live is a state, shown as a text badge with a dot — not a button (SHIG 49, 96). */
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.live-badge[hidden] {
+  display: none;
+}
+
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ff5a5a;
+}
+
+.scrubber .track .tick-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.scrubber .track .tick-label {
+  position: absolute;
+  top: 4px;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.scrubber .track .tick-labels[hidden],
+.scrubber .track .tick-label[hidden],
+.scrubber .track .track-hint[hidden] {
+  display: none;
+}
+
+.scrubber .track .track-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  background: var(--surface-strong);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  pointer-events: none;
 }
 
 /* ===== Tab bar ===== */
@@ -761,6 +824,54 @@ select.num-input {
   min-width: 76px;
 }
 
+/* Window/obstacle rows are cards; the remove button sits on the card's
+   top-right corner, 44px square and clear of the inputs (SHIG 16, 13, 78). */
+.row-strip.item-card {
+  position: relative;
+  padding: 10px 64px 10px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.remove-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: var(--tap);
+  height: var(--tap);
+  border: none;
+  border-left: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  border-radius: 0 var(--radius-sm) 0 var(--radius-sm);
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 16px;
+}
+
+/* A field that grows a note must not push its neighbours down. */
+.row-strip > .num-field {
+  align-self: flex-start;
+}
+
+.field-note {
+  max-width: 220px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--text);
+  white-space: normal;
+}
+
+.num-input[aria-invalid="true"] {
+  border-color: var(--accent-golden);
+}
+
+.danger-zone {
+  margin-top: 28px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
 .sheet h2 + h2 {
   margin-top: 6px;
 }
@@ -918,4 +1029,143 @@ select.num-input {
   clip-path: inset(50%);
   overflow: hidden;
   white-space: nowrap;
+}
+
+/* ===== Undo notice (SHIG 57, 54) ===== */
+
+/* Top of the screen, under the header: clear of the scrubber, the map's
+   coordinate field and the bottom sheets. */
+.notice {
+  position: fixed;
+  left: 50%;
+  top: calc(env(safe-area-inset-top) + 64px);
+  transform: translateX(-50%);
+  z-index: 41;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  /* left: 50% would otherwise cap the shrink-to-fit width at half the viewport. */
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 4px 4px 4px 18px;
+  min-height: var(--tap);
+  border-radius: 999px;
+  background: #17203c;
+  color: #eef1ff;
+  font-size: 13.5px;
+  box-shadow: var(--shadow);
+  animation: fade-in 160ms ease both;
+}
+
+.notice-msg {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notice-action {
+  flex: none;
+  min-height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent-sun);
+  color: #0b1026;
+  font-weight: 700;
+  font-size: 13.5px;
+}
+
+/* ===== Location set-up (SHIG 32, 42, 55, 58, 66) ===== */
+
+.loc-banner[hidden] {
+  display: none;
+}
+
+.loc-banner-msg {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.loc-banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.gps-control {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.gps-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.gps-status[hidden] {
+  display: none;
+}
+
+.link-btn {
+  min-height: var(--tap);
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: inherit;
+  font-weight: 700;
+  font-size: 12.5px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.name-input {
+  width: 180px;
+}
+
+.coord-form {
+  position: absolute;
+  left: 10px;
+  right: 60px;
+  bottom: 24px;
+  z-index: 800;
+  max-width: 380px;
+}
+
+.coord-row {
+  display: flex;
+  gap: 6px;
+}
+
+.coord-input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--tap);
+  background: rgb(18 24 48 / 92%);
+  box-shadow: var(--shadow);
+}
+
+:root[data-theme="light"] .coord-input {
+  background: #fff;
+}
+
+.coord-error {
+  margin: 0 0 6px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: rgb(0 0 0 / 70%);
+  color: #fff;
+  font-size: 12px;
+}
+
+.coord-error[hidden] {
+  display: none;
 }

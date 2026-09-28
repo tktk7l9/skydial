@@ -107,6 +107,20 @@ export function formatDate(date: Date, locale: Locale, utcOffsetMin: number | nu
   return new Intl.DateTimeFormat(locale, { ...opts, timeZone: "UTC" }).format(shifted);
 }
 
+/** Compact month/day ("6/21") for labels such as the dome legend. */
+export function formatShortDate(
+  date: Date,
+  locale: Locale,
+  utcOffsetMin: number | null,
+): string {
+  const opts: Intl.DateTimeFormatOptions = { month: "numeric", day: "numeric" };
+  if (utcOffsetMin === null) {
+    return new Intl.DateTimeFormat(locale, opts).format(date);
+  }
+  const shifted = new Date(date.getTime() + utcOffsetMin * 60_000);
+  return new Intl.DateTimeFormat(locale, { ...opts, timeZone: "UTC" }).format(shifted);
+}
+
 /** Degrees with one decimal and the ° suffix, using locale digits rules. */
 export function formatDeg(value: number, locale: Locale): string {
   return `${new Intl.NumberFormat(locale, {

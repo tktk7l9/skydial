@@ -12,7 +12,6 @@ export const en = {
   tabAr: "AR",
 
   // Scrubber
-  now: "Now",
   live: "Live",
   scrubHint: "Drag to change time",
 
@@ -124,7 +123,7 @@ export const en = {
   hEaveOut: "Eave overhang",
   hAzimuth: "Facing azimuth",
   hAlbedo: "Ground albedo",
-  hTurbidity: "Turbidity TL",
+  hTurbidity: "Haze (turbidity)",
   hWindows: "Windows",
   hAddWindow: "+ Window",
   hObstacles: "Neighbors / obstacles",
@@ -135,7 +134,7 @@ export const en = {
   hWinH: "H",
   hSill: "Sill",
   hOff: "From left",
-  hShgc: "η",
+  hShgc: "Solar gain",
   hObsX: "E(+)/W(−)",
   hObsY: "N(+)/S(−)",
   hObsW: "W",
@@ -153,7 +152,7 @@ export const en = {
   resRoomHours: "Room sunshine",
   resNoFloorPatch: "No floor patch (blocked, or beam too low to reach the floor)",
   houseNote:
-    "Clear-sky estimate (Ineichen–Perez, adjustable TL). Constant η, unshaded ground reflection — real weather yields less.",
+    "Clear-sky estimate (Ineichen–Perez model, adjustable haze). Constant solar gain, unshaded ground reflection — real weather yields less.",
   houseInteriorNote:
     "The floor patch is a simplification: the whole house is treated as one room, and a beam that would reach the far wall before the floor is shown as not reaching the floor at all.",
 
@@ -182,6 +181,32 @@ export const en = {
   arSensorDenied: "Motion sensors unavailable — drag to look around",
   arCameraDenied: "Camera unavailable — showing sky gradient",
   arDragHint: "Drag to look around",
+
+  // SHIG review (2026-09)
+  undo: "Undo",
+  windowRemoved: "Window removed",
+  obstacleRemoved: "Obstacle removed",
+  hRemoveWindow: "Remove window {n}",
+  hRemoveObstacle: "Remove obstacle {n}",
+  hClamped: "Enter {lo}–{hi} (adjusted to {v})",
+  hRounded: "Rounded to {v}",
+  hReset: "Reset to defaults",
+  houseResetDone: "House reset to defaults",
+  defaultLocationBanner: "Showing times for Tokyo — no location set yet",
+  pickOnMap: "Pick on the map",
+  gpsLocating: "Locating…",
+  openMap: "Open the map",
+  locationChanged: "Location changed",
+  coordInputLabel: "Latitude, longitude",
+  coordInputPlaceholder: "e.g. 35.4876, 139.4061",
+  coordGo: "Go",
+  coordInvalid: "Enter “latitude, longitude” (e.g. 35.48, 139.40)",
+  locationName: "Location name",
+  locationNamePlaceholder: "e.g. Home",
+  backToNow: "Back to now",
+  scrubTickBefore: "{h}h ago",
+  scrubTickAfter: "in {h}h",
+  scrubFirstHint: "Drag left or right to change the time",
 
   // PWA
   updateReady: "New version ready — tap to update",

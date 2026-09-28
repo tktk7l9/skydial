@@ -7,12 +7,28 @@ import {
   defaultState,
   effectiveTime,
 } from "./state/appState";
-import type { AppState, Locale, Store, Tab, Theme, TileLayer } from "./state/appState";
-import { loadSavedLocation, requestLocation, saveLocation } from "./state/geolocation";
+import type {
+  AppState,
+  Locale,
+  LocationSnapshot,
+  Store,
+  Tab,
+  Theme,
+  TileLayer,
+} from "./state/appState";
+import {
+  clearSavedLocation,
+  loadLocationName,
+  loadSavedLocation,
+  nameLocation,
+  requestLocation,
+  saveLocation,
+  saveLocationName,
+} from "./state/geolocation";
 import { autoUtcOffsetMin, deviceUtcOffsetMin } from "./state/tzEstimate";
 import { decodeUrlState, encodeUrlState } from "./state/urlState";
 import type { GeoLocation } from "./astro/types";
-import { decodeHouse, encodeHouse } from "./sunsim/houseCodec";
+import { hideHouse, houseToShow, loadVisibleHouse, saveHouse } from "./state/housePrefs";
 import type { HouseModel } from "./sunsim/house";
 import {
   detectLocale,
@@ -21,6 +37,7 @@ import {
   formatDeg,
   formatDuration,
   formatPercent,
+  formatShortDate,
   formatTime,
   phaseNameKey,
   t,
@@ -48,6 +65,8 @@ export interface AppCtx {
   phaseKey(name: MoonPhaseName): MsgKey;
   fmtTime(d: Date, withSeconds?: boolean): string;
   fmtDate(d: Date): string;
+  /** Compact "6/21" date in the display zone. */
+  fmtShortDate(d: Date): string;
   fmtDeg(v: number): string;
   fmtDur(ms: number): string;
   fmtPct(v: number): string;
@@ -56,16 +75,23 @@ export interface AppCtx {
   setTiles(t: TileLayer): void;
   /** Persist + apply a location, auto-estimating the UTC offset when remote. */
   setLocation(loc: GeoLocation, source: "gps" | "manual"): void;
-  /** Persist + apply the insolation-study house model (null = off). */
-  setHouse(house: HouseModel | null): void;
-  requestGps(): Promise<void>;
+  /** Put back a location captured before a change (the undo of setLocation). */
+  restoreLocation(snapshot: LocationSnapshot): void;
+  /** Name the current location ("Home"); blank clears it. */
+  setLocationName(raw: string): void;
+  /** Persist + apply (and show) the insolation-study house model. */
+  setHouse(house: HouseModel): void;
+  /** Show/hide the house. Hiding keeps the saved model (SHIG 38, 54). */
+  toggleHouse(): void;
+  /** Ask for the device location; resolves false when it is unavailable. */
+  requestGps(): Promise<boolean>;
 }
+
 
 const LS = {
   locale: "skydial:locale",
   theme: "skydial:theme",
   tiles: "skydial:tiles",
-  house: "skydial:house",
 };
 
 export function startApp(root: HTMLElement): void {
@@ -80,13 +106,14 @@ export function startApp(root: HTMLElement): void {
   if (saved !== null) {
     initial.location = saved;
     initial.locationSource = "manual";
+    initial.locationName = loadLocationName(localStorage);
   }
-  const savedHouse = localStorage.getItem(LS.house);
-  if (savedHouse !== null) initial.house = decodeHouse(savedHouse);
+  initial.house = loadVisibleHouse(localStorage);
   const fromUrl = decodeUrlState(location.search);
   if (fromUrl.location) {
     initial.location = fromUrl.location;
     initial.locationSource = "manual";
+    initial.locationName = null;
     // Shared links without an explicit ?utc= still get sensible local times.
     initial.utcOffsetMin = autoUtcOffsetMin(fromUrl.location.lng, deviceUtcOffsetMin());
   }
@@ -97,6 +124,8 @@ export function startApp(root: HTMLElement): void {
   if (fromUrl.house !== undefined) initial.house = fromUrl.house;
 
   const store = createStore(initial);
+  /** The house hidden in this session, restored as-is when shown again. */
+  let lastHiddenHouse: HouseModel | null = null;
 
   // ----- Context -----
   const ctx: AppCtx = {
@@ -107,6 +136,7 @@ export function startApp(root: HTMLElement): void {
     fmtTime: (d, withSeconds) =>
       formatTime(d, store.get().locale, store.get().utcOffsetMin, withSeconds),
     fmtDate: (d) => formatDate(d, store.get().locale, store.get().utcOffsetMin),
+    fmtShortDate: (d) => formatShortDate(d, store.get().locale, store.get().utcOffsetMin),
     fmtDeg: (v) => formatDeg(v, store.get().locale),
     fmtDur: (ms) => formatDuration(ms, store.get().locale),
     fmtPct: (v) => formatPercent(v, store.get().locale),
@@ -124,20 +154,47 @@ export function startApp(root: HTMLElement): void {
     },
     setLocation: (loc, source) => {
       saveLocation(localStorage, loc);
+      // A name belongs to the place it was given to.
+      saveLocationName(localStorage, null);
       store.set({
         location: loc,
         locationSource: source,
+        locationName: null,
         utcOffsetMin: autoUtcOffsetMin(loc.lng, deviceUtcOffsetMin()),
       });
     },
+    restoreLocation: (snap) => {
+      if (snap.locationSource === "default") {
+        clearSavedLocation(localStorage);
+      } else {
+        saveLocation(localStorage, snap.location);
+        saveLocationName(localStorage, snap.locationName);
+      }
+      store.set({ ...snap });
+    },
+    setLocationName: (raw) => {
+      store.set(nameLocation(localStorage, store.get(), raw));
+    },
     setHouse: (house) => {
-      if (house === null) localStorage.removeItem(LS.house);
-      else localStorage.setItem(LS.house, encodeHouse(house));
+      saveHouse(localStorage, house);
+      lastHiddenHouse = null;
       store.set({ house });
+    },
+    toggleHouse: () => {
+      const current = store.get().house;
+      if (current === null) {
+        ctx.setHouse(houseToShow(localStorage, lastHiddenHouse));
+      } else {
+        hideHouse(localStorage);
+        lastHiddenHouse = current;
+        store.set({ house: null });
+      }
     },
     requestGps: async () => {
       const loc = await requestLocation(navigator.geolocation);
-      if (loc !== null) ctx.setLocation(loc, "gps");
+      if (loc === null) return false;
+      ctx.setLocation(loc, "gps");
+      return true;
     },
   };
 
@@ -220,12 +277,14 @@ export function startApp(root: HTMLElement): void {
     const time = effectiveTime(s);
     applySkyGradient(sunPosition(time, s.location).altitude);
     const coords = `${s.location.lat.toFixed(2)}, ${s.location.lng.toFixed(2)}`;
-    locChip.textContent = coords;
+    // The user's own name for the place reads better than raw numbers (11, 28).
+    const place = s.locationName ?? coords;
+    locChip.textContent = place;
     // The topbar is not rebuilt on a locale switch, so its labels are set here.
     locChip.title = ctx.tr("changeLocationOnMap");
     locChip.setAttribute(
       "aria-label",
-      `${ctx.tr("location")}: ${coords} — ${ctx.tr("changeLocationOnMap")}`,
+      `${ctx.tr("location")}: ${place} — ${ctx.tr("changeLocationOnMap")}`,
     );
     gearBtn.setAttribute("aria-label", ctx.tr("settings"));
     scrubber.update(s);

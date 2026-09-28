@@ -21,6 +21,7 @@ import type { MsgKey } from "../i18n/keys";
 import type { AppCtx } from "../app";
 import { clear, el } from "./dom";
 import { buildTimeline } from "./timelineBar";
+import { createGpsControl } from "./gpsControl";
 
 interface DayCache {
   key: string;
@@ -102,7 +103,25 @@ export function createDashboard(ctx: AppCtx): {
   root: HTMLElement;
   update(s: AppState, time: Date): void;
 } {
-  const root = el("div", {});
+  // The banner lives outside the per-tick rebuild so its GPS progress and
+  // error survive the 1 Hz live refresh.
+  const banner = el(
+    "div",
+    { class: "card loc-banner", role: "note" },
+    el("p", { class: "loc-banner-msg" }, ctx.tr("defaultLocationBanner")),
+    el(
+      "div",
+      { class: "loc-banner-actions" },
+      createGpsControl(ctx),
+      el(
+        "button",
+        { type: "button", class: "btn", onclick: () => ctx.store.set({ tab: "map" }) },
+        ctx.tr("pickOnMap"),
+      ),
+    ),
+  );
+  const content = el("div", {});
+  const root = el("div", {}, banner, content);
   let cache: DayCache | null = null;
 
   function timeRow(label: string, value: string, cls = ""): HTMLElement {
@@ -121,7 +140,7 @@ export function createDashboard(ctx: AppCtx): {
     const phase = moonPhase(time);
     const fmtT = (d: Date | null): string => (d === null ? ctx.tr("noEvent") : ctx.fmtTime(d));
 
-    clear(root);
+    clear(content);
 
     // --- Hero cards ---
     const sunCard = el(
@@ -164,12 +183,12 @@ export function createDashboard(ctx: AppCtx): {
         `${ctx.trDir(moon.azimuth)} · ${ctx.fmtDeg(moon.apparentAltitude)} · ${ctx.fmtPct(phase.illumination)}`,
       ),
     );
-    root.append(el("div", { class: "hero" }, sunCard, moonCard));
+    content.append(el("div", { class: "hero" }, sunCard, moonCard));
 
     // --- Countdown banner ---
     const cd = nextCountdown(time, day, loc);
     if (cd !== null) {
-      root.append(
+      content.append(
         el(
           "div",
           { class: "card countdown" },
@@ -208,7 +227,7 @@ export function createDashboard(ctx: AppCtx): {
         chip(ctx.tr("chipNextNew"), () => nextPrincipalPhase(time, "new")),
       ),
     );
-    root.append(timelineCard);
+    content.append(timelineCard);
 
     // --- Sun times ---
     const sunTimes = el("div", { class: "times" });
@@ -243,7 +262,7 @@ export function createDashboard(ctx: AppCtx): {
       timeRow(ctx.tr("astronomicalDawn"), fmtT(day.sun.astronomicalDawn)),
       timeRow(ctx.tr("astronomicalDusk"), fmtT(day.sun.astronomicalDusk)),
     );
-    root.append(el("div", { class: "card" }, el("h2", {}, ctx.tr("sun")), sunTimes));
+    content.append(el("div", { class: "card" }, el("h2", {}, ctx.tr("sun")), sunTimes));
 
     // --- Moon times ---
     const moonTimes = el("div", { class: "times" });
@@ -272,9 +291,9 @@ export function createDashboard(ctx: AppCtx): {
         "range",
       ),
     );
-    root.append(el("div", { class: "card" }, el("h2", {}, ctx.tr("moon")), moonTimes));
+    content.append(el("div", { class: "card" }, el("h2", {}, ctx.tr("moon")), moonTimes));
 
-    root.append(el("p", { class: "footnote" }, ctx.tr("accuracyNote")));
+    content.append(el("p", { class: "footnote" }, ctx.tr("accuracyNote")));
   }
 
   return {
@@ -288,6 +307,9 @@ export function createDashboard(ctx: AppCtx): {
       if (cache === null || cache.key !== key) {
         cache = computeDay(time, s.location, s.utcOffsetMin);
       }
+      // Until a location is chosen the times are Tokyo's; say so up front
+      // and offer the two ways to fix it (SHIG 32, 42).
+      banner.hidden = s.locationSource !== "default";
       render(s, time, cache);
     },
   };
