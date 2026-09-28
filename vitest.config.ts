@@ -1,7 +1,7 @@
 import { defineConfig } from "vitest/config";
 
-// 純ロジック層(天体計算・状態・i18n・地図の測地線計算)は 100% を維持する
-// (既存アプリの lib-100% 方針に準拠)。UI/Three/Leaflet 層はゲート対象外。
+// Keep the pure logic layer (astronomy, state, i18n, map geodesic math) at 100%
+// (following the existing apps' lib-100% policy). UI/Three/Leaflet layers are not gated.
 const PURE_GLOBS = [
   "src/astro/**/*.ts",
   "src/state/**/*.ts",

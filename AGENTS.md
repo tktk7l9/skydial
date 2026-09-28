@@ -1,57 +1,57 @@
-# このリポジトリについて（AI/Claude向け）
+# About this repository (for AI/Claude)
 
-太陽と月の位置・出入り・薄明を追うクロスプラットフォームPWA「Skydial」。
-Sun Surveyor / Sun Seeker の代替を、洗練されたモバイルファーストUIで。ja/en 両対応。
+"Skydial", a cross-platform PWA that tracks the positions, rising/setting, and twilight of the sun and moon.
+An alternative to Sun Surveyor / Sun Seeker with a refined, mobile-first UI. Supports both ja and en.
 
-## 開発規約
+## Development conventions
 
-- **Vanilla Vite + TypeScript**。フレームワーク不使用。UIはDOM直組み(`src/ui/`)。
-- **重いライブラリは動的import**: Three.js(ドーム)と Leaflet(地図)は各タブ初回表示時にロード。
-  初期バンドルはダッシュボード+天体計算のみ(数KB gzip目標)。`vite build` の出力で確認する。
-- **厳格CSP前提**(public/_headers)。inline script/style禁止。外部リソースは地図タイル(img-src)のみ。
-- **Permissions-Policy は camera/geolocation/センサー = self**。テンプレ由来の全拒否に戻さないこと(AR/GPSが黙って死ぬ)。
+- **Vanilla Vite + TypeScript**. No framework. The UI is built directly with the DOM (`src/ui/`).
+- **Heavy libraries are dynamically imported**: Three.js (dome) and Leaflet (map) load on each tab's first display.
+  The initial bundle contains only the dashboard + astronomy calculations (target: a few KB gzip). Check it with the `vite build` output.
+- **Strict CSP is assumed** (public/_headers). No inline script/style. The only external resources are map tiles (img-src).
+- **Permissions-Policy sets camera/geolocation/sensors = self**. Do not revert to the template's deny-all (AR/GPS would silently die).
 
-## テスト方針(lib 100%)
+## Testing policy (lib 100%)
 
-- `src/astro/**`・`src/state/**`・`src/i18n/**`・`src/views/map/rays.ts`・
-  `src/views/ar/pose.ts`・`src/views/ar/projection.ts`・`src/sunsim/**` は
-  カバレッジ100%ゲート(vitest.config.ts)。UI/Three/Leaflet層は対象外。
-- 天体計算は fixture 突合(`src/astro/__fixtures__/ephemeris.ts`、出典コメント必須):
-  NOAA Solar Calculator・国立天文台こよみ・USNO・JPL Horizons。許容誤差=太陽±1分/±0.1°、月±5分/±0.3°。
-- 日射計算は pvlib-python 生成 fixture(`src/sunsim/__fixtures__/clearsky.ts`、生成スクリプト全文コミット必須)
-  と0.1%以内で突合。物理不変量(冬至南面>夏至南面・北面窓の冬至直達≈0 等)もセットで。
-- エッジを必ず含める: 極夜白夜(型 `RiseSetResult` で表現)・月の出/入りが無い日(null)・うるう年・日付変更線。
+- `src/astro/**`, `src/state/**`, `src/i18n/**`, `src/views/map/rays.ts`,
+  `src/views/ar/pose.ts`, `src/views/ar/projection.ts`, and `src/sunsim/**` are under the
+  100% coverage gate (vitest.config.ts). The UI/Three/Leaflet layers are excluded.
+- Astronomy calculations are cross-checked against fixtures (`src/astro/__fixtures__/ephemeris.ts`, source comments required):
+  NOAA Solar Calculator, NAOJ Koyomi (国立天文台こよみ), USNO, JPL Horizons. Tolerance = sun ±1 min/±0.1°, moon ±5 min/±0.3°.
+- Solar irradiance calculations are cross-checked within 0.1% against pvlib-python-generated fixtures (`src/sunsim/__fixtures__/clearsky.ts`; the full generator script must be committed),
+  together with physical invariants (south face at winter solstice > south face at summer solstice, direct irradiance on north-facing windows at winter solstice ≈ 0, etc.).
+- Always include edge cases: polar night/midnight sun (expressed by the `RiseSetResult` type), days with no moonrise/moonset (null), leap years, the date line.
 
-## 天体計算の出典
+## Sources for astronomy calculations
 
-- 太陽: Meeus "Astronomical Algorithms" ch.25 低精度式(誤差~0.01°)。
-- 月: Meeus ch.47 truncated(主要項・目標0.3°)+地心視差補正。月齢/輝面比は ch.48。朔望・夏至冬至は
-  離角/黄経クロッシングの二分法ソルバー(`src/astro/phaseevents.ts`)。
-- 座標変換・大気差(Bennett)は `src/astro/coords.ts`。方位規約は N=0°時計回り。
+- Sun: Meeus "Astronomical Algorithms" ch.25 low-precision formulas (error ~0.01°).
+- Moon: Meeus ch.47 truncated (main terms, target 0.3°) + geocentric parallax correction. Moon age/illuminated fraction from ch.48. New/full moons and solstices use
+  a bisection solver on elongation/ecliptic longitude crossings (`src/astro/phaseevents.ts`).
+- Coordinate transforms and atmospheric refraction (Bennett) are in `src/astro/coords.ts`. Azimuth convention: N=0°, clockwise.
 
-## 日射計算(sunsim/)の出典
+## Sources for solar irradiance calculations (sunsim/)
 
-- 晴天モデル: Ineichen–Perez (2002)。傾斜面: Hay–Davies。係数は pvlib-python(BSD-3-Clause)から移植、
-  関数ヘッダに出典URL必須。新しい放射モデルの式を追加するときは一次出典または pvlib 参照実装から
-  確認すること(係数を記憶や推測で書かない)。
-- 幾何/遮蔽: `src/sunsim/geometry.ts` が唯一の三角形メッシュ生成元(表示用 `house3d.ts` と
-  遮蔽計算 `shading.ts` の両方がここから作る)。ENU座標はドーム(`views/dome/`)と共通
-  (+x東,+y上,−z北)。新しい屋根形状・障害物形状を追加する際もこの座標系を維持する。
-- `HouseModel` は個人の実寸法を含む可能性がある。デフォルト値(`defaultHouse()`)は
-  「典型例」に留め、実データをリポジトリにコミットしない(localStorage/URL共有のみ)。
-- 室内可視化(`src/sunsim/interior.ts`): 窓の4隅を太陽方向に沿って床(y=0)へ投影し、建物footprint
-  矩形(Sutherland–Hodgman)でクリップする純幾何。日陰(`directShadeFraction`)の適用は呼び出し側
-  (`simulate.ts`/`house3d.ts`)の責務— interior.ts自体は遮蔽を知らない。建物全体を1部屋として扱う
-  簡略化のため、奥の壁に先に当たるような低い光線は意図的に「床パッチなし」を返す(壁面パッチはv1スコープ外)。
-  `house3d.ts` は屋根を半透明にして(壁は不透明)俯瞰角度から常にパッチが見えるようにしている
-  — 新しい建物パーツ(内壁・複数階等)を追加する際もこの可視性を壊さないこと。
+- Clear-sky model: Ineichen–Perez (2002). Tilted surfaces: Hay–Davies. Coefficients ported from pvlib-python (BSD-3-Clause);
+  a source URL is required in the function header. When adding formulas for a new radiation model, verify them against a primary source or
+  the pvlib reference implementation (do not write coefficients from memory or by guessing).
+- Geometry/shading: `src/sunsim/geometry.ts` is the single source of triangle meshes (both the display `house3d.ts` and
+  the shading calculation `shading.ts` build from it). ENU coordinates are shared with the dome (`views/dome/`)
+  (+x east, +y up, −z north). Keep this coordinate system when adding new roof shapes or obstacle shapes.
+- `HouseModel` may contain personal real-world dimensions. Keep the default values (`defaultHouse()`) to a
+  "typical example" and do not commit real data to the repository (localStorage/URL sharing only).
+- Interior visualization (`src/sunsim/interior.ts`): pure geometry that projects a window's 4 corners along the sun direction onto the floor (y=0) and clips them with the building footprint
+  rectangle (Sutherland–Hodgman). Applying shade (`directShadeFraction`) is the caller's responsibility
+  (`simulate.ts`/`house3d.ts`) — interior.ts itself knows nothing about shading. Because the whole building is treated as a single room
+  for simplicity, low rays that would hit the back wall first intentionally return "no floor patch" (wall patches are out of v1 scope).
+  `house3d.ts` makes the roof semi-transparent (walls are opaque) so patches are always visible from an overhead angle
+  — do not break this visibility when adding new building parts (interior walls, multiple floors, etc.).
 
-## コミット粒度
+## Commit granularity
 
-フェーズ単位(計算エンジン/画面/ビュー)でまとまったら commit。テストとセットで。
-tsc green / test green / build green を保ってから commit する。
+Commit once a phase (calculation engine/screen/view) comes together, along with its tests.
+Keep tsc green / test green / build green before committing.
 
-## 留意
+## Notes
 
-- **public**(2026-07-08〜)。公開リポジトリなので個人情報・実データをコード/テストに入れない。
-- 計算値は概算(航海・測量用途ではない)。日射計算も気象データなしの晴天モデル概算。UIにも脚注済み。
+- **public** (since 2026-07-08). This is a public repository, so do not put personal information or real data in code/tests.
+- Calculated values are approximate (not for navigation or surveying). Solar irradiance calculations are also clear-sky-model approximations without weather data. This is footnoted in the UI as well.
