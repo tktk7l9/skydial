@@ -15,7 +15,12 @@ An alternative to Sun Surveyor / Sun Seeker with a refined, mobile-first UI. Sup
 
 - `src/astro/**`, `src/state/**`, `src/i18n/**`, `src/views/map/rays.ts`,
   `src/views/ar/pose.ts`, `src/views/ar/projection.ts`, and `src/sunsim/**` are under the
-  100% coverage gate (vitest.config.ts). The UI/Three/Leaflet layers are excluded.
+  100% coverage gate (vitest.config.ts).
+- The UI layer (`src/app.ts`, `src/main.ts`, `src/ui/**`, `src/views/**`) has its own gate at 96/89/96/96
+  (stmts/branches/funcs/lines; reached 98.1/91.2/98.4/98.5). UI tests are behavioural jsdom tests
+  (`// @vitest-environment jsdom` + Testing Library): assert visible text, roles and store/URL state.
+  WebGL is replaced by a fake renderer and 2D canvas by `src/test-utils/fakeCanvas.ts`; Leaflet runs for real.
+  Tests that assert device-local clock times pin `TZ` (see `src/app.test.ts`) — CI runs in UTC.
 - Astronomy calculations are cross-checked against fixtures (`src/astro/__fixtures__/ephemeris.ts`, source comments required):
   NOAA Solar Calculator, NAOJ Koyomi (国立天文台こよみ), USNO, JPL Horizons. Tolerance = sun ±1 min/±0.1°, moon ±5 min/±0.3°.
 - Solar irradiance calculations are cross-checked within 0.1% against pvlib-python-generated fixtures (`src/sunsim/__fixtures__/clearsky.ts`; the full generator script must be committed),
