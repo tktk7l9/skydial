@@ -52,9 +52,15 @@ export function createScrubber(ctx: AppCtx): {
     tabindex: "-1",
     "aria-label": ctx.tr("scrubHint"),
   });
+  // The picker speaks the same wall time as the clock above it: the chosen
+  // UTC offset for a remote place, else the device zone.
   picker.addEventListener("change", () => {
     if (picker.value === "") return;
-    const picked = new Date(picker.value);
+    const offset = ctx.store.get().utcOffsetMin;
+    const picked =
+      offset === null
+        ? new Date(picker.value)
+        : new Date(Date.parse(`${picker.value}Z`) - offset * 60_000);
     if (!Number.isNaN(picked.getTime())) ctx.store.set({ time: picked });
   });
 
@@ -66,9 +72,10 @@ export function createScrubber(ctx: AppCtx): {
       onclick: () => {
         const s = ctx.store.get();
         const base = effectiveTime(s);
-        // Pre-fill with the current instant in device-local wall time.
-        const local = new Date(base.getTime() - base.getTimezoneOffset() * 60_000);
-        picker.value = local.toISOString().slice(0, 16);
+        // Pre-fill with the wall time the clock shows (display zone).
+        const offsetMin = s.utcOffsetMin ?? -base.getTimezoneOffset();
+        const wall = new Date(base.getTime() + offsetMin * 60_000);
+        picker.value = wall.toISOString().slice(0, 16);
         if ("showPicker" in picker) picker.showPicker();
       },
     },
