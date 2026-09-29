@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { createDashboard } from "./dashboard";
 import { createTestCtx } from "../test-utils/testCtx";
 import type { AppState } from "../state/appState";
+import { sunPosition } from "../astro/solar";
 
 const TOKYO = { lat: 35.6762, lng: 139.6503 };
 const TROMSO = { lat: 69.65, lng: 18.96 };
@@ -42,6 +43,19 @@ describe("dashboard", () => {
     expect(screen.getByText(/影 ×0\.\d/)).toBeVisible();
     expect(screen.getByText(/日の入りまで/)).toBeVisible();
     expect(screen.getByText(/航海など高精度用途には使えません/)).toBeVisible();
+  });
+
+  it("caps the shadow ratio at 99+ just above the horizon, and drops it below", () => {
+    // Walk from before sunrise to the first instant the sun clears 0.1°
+    // (shadow ratio > 99 below ~0.58°).
+    let t = new Date("2026-06-20T19:00:00Z").getTime();
+    while (sunPosition(new Date(t), TOKYO).apparentAltitude <= 0.15) t += 30_000;
+    expect(sunPosition(new Date(t), TOKYO).apparentAltitude).toBeLessThan(0.5);
+    const { ctx } = mount({ time: new Date(t), location: TOKYO, locationSource: "gps" });
+    expect(screen.getByText(/影 ×99\+/)).toBeVisible();
+
+    ctx.store.set({ time: new Date(t - 30 * 60_000) });
+    expect(screen.queryByText(/影 ×/)).not.toBeInTheDocument();
   });
 
   it("asks for a location while the default (Tokyo) is in use", async () => {

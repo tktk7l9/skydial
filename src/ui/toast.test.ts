@@ -65,12 +65,16 @@ describe("showToast", () => {
   });
 
   it("ignores a stale release after being replaced", () => {
-    showToast({ message: "old", durationMs: 1000 });
+    showToast({ message: "old", durationMs: 300 });
     const old = screen.getByRole("status");
     showToast({ message: "new", durationMs: 1000 });
+    // A late pointerleave on the replaced notice must not arm its own
+    // (shorter) timer, which would dismiss the new one early.
     old.dispatchEvent(new Event("pointerleave"));
     vi.advanceTimersByTime(500);
     expect(screen.getByRole("status")).toHaveTextContent("new");
+    vi.advanceTimersByTime(500);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
   it("dismissToast is a no-op with nothing showing", () => {
