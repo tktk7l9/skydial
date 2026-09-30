@@ -50,7 +50,7 @@ export function createScrubber(ctx: AppCtx): {
     type: "datetime-local",
     class: "vh",
     tabindex: "-1",
-    "aria-label": ctx.tr("scrubHint"),
+    "aria-label": ctx.tr("pickDateTime"),
   });
   // The picker speaks the same wall time as the clock above it: the chosen
   // UTC offset for a remote place, else the device zone.
@@ -69,6 +69,7 @@ export function createScrubber(ctx: AppCtx): {
     {
       type: "button",
       class: "datetime",
+      title: ctx.tr("pickDateTime"),
       onclick: () => {
         const s = ctx.store.get();
         const base = effectiveTime(s);
@@ -167,7 +168,16 @@ export function createScrubber(ctx: AppCtx): {
     ctx.tr("backToNow"),
   );
 
-  const root = el("div", { class: "scrubber" }, datetime, picker, track, nowBtn);
+  // A landmark of its own: the time controls sit outside <main> and are the
+  // one thing every tab shares.
+  const root = el(
+    "section",
+    { class: "scrubber", "aria-label": ctx.tr("timeControls") },
+    datetime,
+    picker,
+    track,
+    nowBtn,
+  );
 
   return {
     root,

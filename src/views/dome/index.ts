@@ -45,7 +45,7 @@ function solsticeDates(year: number): { jun: Date; dec: Date } {
 }
 
 export function createDomeView(ctx: AppCtx): View {
-  const canvas = el("canvas", {});
+  const canvas = el("canvas", { role: "img", "aria-label": ctx.tr("domeCanvasLabel") });
   const legend = el("div", { class: "legend" });
   const hint = el("div", { class: "view-hint" }, ctx.tr("domeDragHint"));
   const houseChip = el(

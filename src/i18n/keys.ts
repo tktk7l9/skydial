@@ -208,6 +208,13 @@ export const en = {
   scrubTickAfter: "in {h}h",
   scrubFirstHint: "Drag left or right to change the time",
 
+  // Accessible names (landmarks, dialogs, canvases)
+  tabsNav: "Views",
+  timeControls: "Time",
+  pickDateTime: "Pick a date and time",
+  close: "Close",
+  domeCanvasLabel: "3D dome of the sun and moon paths",
+
   // PWA
   updateReady: "New version ready — tap to update",
 

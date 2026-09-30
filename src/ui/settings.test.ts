@@ -21,6 +21,22 @@ describe("settings sheet", () => {
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
     expect(dialog()).toHaveClass("no-enter");
     expect(within(dialog()).getByRole("button", { name: "ダーク" })).toHaveClass("active");
+    // The rebuilt sheet keeps keyboard focus on the choice just made, and the
+    // choice reads as pressed (SHIG 42).
+    expect(within(dialog()).getByRole("button", { name: "ダーク" })).toHaveFocus();
+    expect(within(dialog()).getByRole("button", { name: "ダーク" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(within(dialog()).getByRole("group", { name: "テーマ" })).toBeInTheDocument();
+  });
+
+  it("is a named dialog with a close button", async () => {
+    const ctx = createTestCtx();
+    openSettings(ctx);
+    expect(dialog()).toHaveAccessibleName("設定");
+    await userEvent.click(within(dialog()).getByRole("button", { name: "閉じる" }));
+    expect(dialog()).toHaveClass("closing");
   });
 
   it("switches language, tiles and UTC offset", async () => {

@@ -191,6 +191,12 @@ export const ja: Record<MsgKey, string> = {
   scrubTickAfter: "{h}時間後",
   scrubFirstHint: "左右にドラッグで時刻を変更",
 
+  tabsNav: "画面切り替え",
+  timeControls: "時刻",
+  pickDateTime: "日時を指定",
+  close: "閉じる",
+  domeCanvasLabel: "太陽と月の軌道の3Dドーム",
+
   updateReady: "新しいバージョンがあります — タップで更新",
 
   dirN: "北",

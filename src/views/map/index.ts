@@ -42,7 +42,7 @@ const PIN_SVG =
   '<svg viewBox="0 0 32 32" width="32" height="32"><path d="M16 30S6 21.6 6 13.8A10 10 0 0 1 16 4a10 10 0 0 1 10 9.8C26 21.6 16 30 16 30z" fill="#ffb347" stroke="#1a2142" stroke-width="2"/><circle cx="16" cy="13.6" r="3.6" fill="#1a2142"/></svg>';
 
 export function createMapView(ctx: AppCtx): View {
-  const host = el("div", { class: "leaflet-host" });
+  const host = el("div", { class: "leaflet-host", "aria-label": ctx.tr("tapMapToSet") });
   const legend = el("div", { class: "legend" });
   // Coordinates can be typed or pasted in any common spelling (SHIG 50, 51).
   // Place-name search would need an external geocoder, which the strict CSP

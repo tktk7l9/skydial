@@ -10,7 +10,7 @@ import { HOUSE_LIMITS, clampHouse, defaultHouse } from "../../sunsim/house";
 import type { HouseModel, Obstacle, WindowSpec } from "../../sunsim/house";
 import { faceAzimuth } from "../../sunsim/geometry";
 import type { AppCtx } from "../../app";
-import { closeSheet, el } from "../../ui/dom";
+import { el, openSheet } from "../../ui/dom";
 import { showToast } from "../../ui/toast";
 import { describeAdjustment, restoreRemoved } from "../../state/houseEdit";
 import type { RemovedItem } from "../../state/houseEdit";
@@ -21,13 +21,11 @@ export function openHouseEditor(ctx: AppCtx): void {
   if (initial === null) return;
   let model: HouseModel = initial;
 
-  const backdrop = el("div", { class: "sheet-backdrop", onclick: close });
-  const sheet = el("div", { class: "sheet", role: "dialog", "aria-modal": "true" });
+  const { sheet } = openSheet({
+    title: ctx.tr("houseEditTitle"),
+    closeLabel: ctx.tr("close"),
+  });
   const body = el("div", {});
-
-  function close(): void {
-    closeSheet(backdrop, sheet);
-  }
 
   function apply(next: HouseModel): void {
     model = clampHouse(next);
@@ -173,11 +171,12 @@ export function openHouseEditor(ctx: AppCtx): void {
 
   function pills<T extends string | number>(
     fid: string,
+    label: string,
     current: T,
     choices: Array<{ value: T; label: string }>,
     onPick: (v: T) => void,
   ): HTMLElement {
-    const group = el("div", { class: "pillgroup" });
+    const group = el("div", { class: "pillgroup", role: "group", "aria-label": label });
     for (const c of choices) {
       group.append(
         el(
@@ -342,6 +341,7 @@ export function openHouseEditor(ctx: AppCtx): void {
       el("span", { class: "lbl" }, ctx.tr("hRoof")),
       pills(
         "roof",
+        ctx.tr("hRoof"),
         model.roof.kind,
         [
           { value: "flat" as const, label: ctx.tr("roofFlat") },
@@ -384,6 +384,7 @@ export function openHouseEditor(ctx: AppCtx): void {
           el("span", { class: "lbl" }, ctx.tr("hRidgeAxis")),
           pills(
             "ridge",
+            ctx.tr("hRidgeAxis"),
             roof.ridgeAxis,
             [
               { value: "w" as const, label: ctx.tr("ridgeW") },
@@ -397,6 +398,7 @@ export function openHouseEditor(ctx: AppCtx): void {
           el("span", { class: "lbl" }, ctx.tr("hLowSide")),
           pills(
             "low",
+            ctx.tr("hLowSide"),
             roof.lowSide,
             ([0, 1, 2, 3] as const).map((f) => ({ value: f, label: faceLabel(f) })),
             (lowSide) => applyRebuild({ ...model, roof: { ...roof, lowSide } }),
@@ -490,7 +492,6 @@ export function openHouseEditor(ctx: AppCtx): void {
     if (keepFocus !== undefined) focusFirst([keepFocus]);
   }
 
-  sheet.append(el("h2", {}, ctx.tr("houseEditTitle")), body);
+  sheet.append(body);
   render();
-  document.body.append(backdrop, sheet);
 }

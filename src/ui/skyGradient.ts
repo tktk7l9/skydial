@@ -25,6 +25,11 @@ function mix(a: [number, number, number], b: [number, number, number], f: number
   return `rgb(${c[0]} ${c[1]} ${c[2]})`;
 }
 
+// Below this altitude the whole gradient is dark enough for light text to
+// read straight on it (the bottom stop at -4° is the last one under ~0.12
+// relative luminance); above it the panels take a dark surface (styles.css).
+const BRIGHT_SKY_ALT = -4;
+
 export function skyColors(sunAltitude: number): { top: string; bottom: string; dark: boolean } {
   const alt = Math.min(STOPS[STOPS.length - 1].alt, Math.max(STOPS[0].alt, sunAltitude));
   let i = 0;
@@ -32,7 +37,11 @@ export function skyColors(sunAltitude: number): { top: string; bottom: string; d
   const a = STOPS[i];
   const b = STOPS[i + 1];
   const f = (alt - a.alt) / (b.alt - a.alt);
-  return { top: mix(a.top, b.top, f), bottom: mix(a.bottom, b.bottom, f), dark: alt < 6 };
+  return {
+    top: mix(a.top, b.top, f),
+    bottom: mix(a.bottom, b.bottom, f),
+    dark: alt < BRIGHT_SKY_ALT,
+  };
 }
 
 /** Write the gradient into CSS custom properties on :root. */

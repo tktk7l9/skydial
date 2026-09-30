@@ -17,6 +17,11 @@
      midday blue independently of the theme — so it is a mid-luminance slate
      that stays legible against both ends instead of a themed tint. */
   --scrollbar: rgb(148 160 195 / 45%);
+  /* Text that is an accent in the dark theme; the light theme swaps in the
+     body colour because the sun tint cannot reach 4.5:1 on a white card. */
+  --accent-sun-text: var(--accent-sun);
+  --accent-blue-text: var(--accent-blue);
+  --focus-ring: var(--accent-sun);
 
   --radius: 16px;
   --radius-sm: 10px;
@@ -34,7 +39,27 @@
   --text: #17203c;
   --text-dim: rgb(23 32 60 / 64%);
   --shadow: 0 8px 28px rgb(20 30 70 / 14%);
+  --accent-sun-text: var(--text);
+  --accent-blue-text: var(--text);
+  --focus-ring: var(--text);
   color-scheme: light;
+}
+
+/* The sky behind the panels runs from midnight black to midday blue on its
+   own, independent of the theme (SHIG 96: never let readability depend on a
+   colour that can change under the text). Under a daytime sky the dark
+   theme's panels turn to translucent night navy so light text keeps 4.5:1;
+   the light theme's panels are white enough already, and at night its dim
+   text gets a slightly more opaque card. */
+:root:not([data-theme="light"])[data-sky="bright"] {
+  --surface: rgb(11 16 38 / 70%);
+  --surface-strong: rgb(11 16 38 / 88%);
+  --border: rgb(255 255 255 / 22%);
+  --text-dim: rgb(238 241 255 / 78%);
+}
+
+:root[data-theme="light"][data-sky="dark"] {
+  --surface: rgb(255 255 255 / 90%);
 }
 
 /* In light theme over a dark (night) sky, panels stay readable because the
@@ -90,6 +115,13 @@ button {
   cursor: pointer;
 }
 
+/* One focus ring for every control, in a colour that reads on the theme's
+   panels (the UA default disappears on the translucent surfaces). */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
 /* ===== App layout ===== */
 
 #app {
@@ -106,9 +138,36 @@ button {
 }
 
 .topbar .brand {
+  margin: 0;
   font-weight: 700;
   font-size: 17px;
   letter-spacing: 0.04em;
+}
+
+/* Text that sits straight on the sky — the header, the clock and the
+   footnotes — gets a panel behind it whenever the sky could wash it out:
+   the light theme always (its dark text never clears a blue sky), the dark
+   theme under a bright sky. */
+:root[data-theme="light"] .topbar,
+:root:not([data-theme="light"])[data-sky="bright"] .topbar {
+  background: var(--surface);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+:root[data-theme="light"] .scrubber .datetime,
+:root:not([data-theme="light"])[data-sky="bright"] .scrubber .datetime {
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+:root[data-theme="light"] main.content .footnote,
+:root:not([data-theme="light"])[data-sky="bright"] main.content .footnote {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
 }
 
 .topbar .loc-chip {
@@ -339,7 +398,7 @@ main.content.wide > * {
   font-size: 15px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: var(--accent-sun);
+  color: var(--accent-sun-text);
   border-color: rgb(255 194 102 / 35%);
 }
 
@@ -437,7 +496,7 @@ main.content.wide > * {
 .polar-note {
   grid-column: 1 / -1;
   font-size: 13px;
-  color: var(--accent-blue);
+  color: var(--accent-blue-text);
 }
 
 .footnote {
@@ -602,8 +661,9 @@ main.content.wide > * {
   -webkit-backdrop-filter: blur(18px);
 }
 
-:root[data-theme="light"] .tabbar {
-  background: rgb(255 255 255 / 55%);
+:root[data-theme="light"] .tabbar,
+:root:not([data-theme="light"])[data-sky="bright"] .tabbar {
+  background: var(--surface);
 }
 
 .tabbar button {
@@ -632,7 +692,7 @@ main.content.wide > * {
 }
 
 .tabbar button.active {
-  color: var(--accent-sun);
+  color: var(--accent-sun-text);
   background: var(--surface);
 }
 
@@ -695,6 +755,36 @@ main.content.wide > * {
 .sheet h2 {
   margin: 2px 0 14px;
   font-size: 16px;
+}
+
+/* Title row with the close button on the far right, clear of the controls
+   (SHIG 16, 60); 44px target (78). */
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.sheet-head h2 {
+  margin: 0;
+}
+
+.sheet-close {
+  flex: none;
+  width: var(--tap);
+  height: var(--tap);
+  margin-right: -8px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: 16px;
+}
+
+.sheet:focus {
+  outline: none;
 }
 
 .setting-row {
@@ -897,7 +987,7 @@ select.num-input {
 .window-result-gain {
   font-weight: 700;
   font-size: 15px;
-  color: var(--accent-sun);
+  color: var(--accent-sun-text);
   font-variant-numeric: tabular-nums;
 }
 
