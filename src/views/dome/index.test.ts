@@ -63,6 +63,7 @@ describe("dome view", () => {
 
   it("labels the paths with the chosen date and draws on demand", async () => {
     const { ctx, root } = mount();
+    expect(root.getByRole("img", { name: "太陽と月の軌道の3Dドーム" })).toBeInTheDocument();
     expect(root.getByText("ドラッグで回転 · ピンチでズーム")).toBeVisible();
     expect(root.getByText("太陽 · 6/21")).toBeVisible();
     expect(root.getByText("夏至")).toBeVisible();

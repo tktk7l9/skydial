@@ -37,7 +37,8 @@
   --surface-strong: rgb(255 255 255 / 95%);
   --border: rgb(15 25 60 / 12%);
   --text: #17203c;
-  --text-dim: rgb(23 32 60 / 64%);
+  /* 72%: at 64% the dim labels sat at 4.3–4.5:1 on a card over a dusk sky. */
+  --text-dim: rgb(23 32 60 / 72%);
   --shadow: 0 8px 28px rgb(20 30 70 / 14%);
   --accent-sun-text: var(--text);
   --accent-blue-text: var(--text);
@@ -1074,7 +1075,8 @@ select.num-input {
   gap: 4px;
   padding: 8px 12px;
   border-radius: var(--radius-sm);
-  background: rgb(0 0 0 / 45%);
+  /* 60%: over a white map tile 45% left the white text at 3.4:1. */
+  background: rgb(0 0 0 / 60%);
   color: #fff;
   font-size: 11.5px;
 }
@@ -1089,6 +1091,12 @@ select.num-input {
   width: 14px;
   height: 3px;
   border-radius: 2px;
+}
+
+/* Leaflet's default link blue (#0078a8) sits at 4.2:1 on its translucent
+   attribution strip; a darker blue keeps the credits readable over tiles. */
+.leaflet-container .leaflet-control-attribution a {
+  color: #005b80;
 }
 
 /* ===== SW update toast ===== */

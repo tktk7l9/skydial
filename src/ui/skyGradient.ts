@@ -25,10 +25,13 @@ function mix(a: [number, number, number], b: [number, number, number], f: number
   return `rgb(${c[0]} ${c[1]} ${c[2]})`;
 }
 
-// Below this altitude the whole gradient is dark enough for light text to
-// read straight on it (the bottom stop at -4° is the last one under ~0.12
-// relative luminance); above it the panels take a dark surface (styles.css).
-const BRIGHT_SKY_ALT = -4;
+// Below this altitude (the end of nautical twilight) the whole gradient is
+// dark enough for the dark theme's dim text to keep 4.5:1 even on a pill
+// nested in a card (two translucent layers over the sky); above it the
+// panels take a solid dark surface instead (styles.css). Measured on real
+// pixels: at -5° the nested pills sit at 3.8:1, at -12° at 4.4:1 and it only
+// climbs from there.
+const BRIGHT_SKY_ALT = -12;
 
 export function skyColors(sunAltitude: number): { top: string; bottom: string; dark: boolean } {
   const alt = Math.min(STOPS[STOPS.length - 1].alt, Math.max(STOPS[0].alt, sunAltitude));
