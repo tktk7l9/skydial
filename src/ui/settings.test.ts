@@ -69,6 +69,19 @@ describe("settings sheet", () => {
     expect(name).toHaveValue("自宅");
   });
 
+  it("shows the place by its name, and opens the map to change it (SHIG 6, 11, 42)", async () => {
+    const ctx = createTestCtx({
+      location: { lat: 35.25, lng: 139.5 },
+      locationSource: "manual",
+      locationName: "自宅",
+    });
+    openSettings(ctx);
+    expect(within(dialog()).getByText("地点: 自宅 (35.2500, 139.5000)")).toBeVisible();
+    await userEvent.click(within(dialog()).getByRole("button", { name: "地図で選ぶ" }));
+    expect(ctx.store.get().tab).toBe("map");
+    await waitFor(() => expect(dialog()).toHaveClass("closing"));
+  });
+
   it("closes from the backdrop", async () => {
     vi.useFakeTimers();
     const ctx = createTestCtx();

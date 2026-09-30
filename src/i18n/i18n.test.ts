@@ -110,6 +110,13 @@ describe("formatters", () => {
     expect(formatDeg(-0.04, "en")).toBe("-0.0°");
     expect(formatDuration(14 * 3_600_000 + 37.4 * 60_000, "en")).toBe("14h 37m");
     expect(formatDuration(14 * 3_600_000 + 37.4 * 60_000, "ja")).toBe("14時間37分");
+    // A zero hour is noise ("0h 52m"), and exact hours drop the minutes (SHIG 28).
+    expect(formatDuration(52 * 60_000, "en")).toBe("52m");
+    expect(formatDuration(52 * 60_000, "ja")).toBe("52分");
+    expect(formatDuration(2 * 3_600_000, "en")).toBe("2h");
+    expect(formatDuration(2 * 3_600_000, "ja")).toBe("2時間");
+    expect(formatDuration(20_000, "ja")).toBe("0分");
+    expect(formatDuration(20_000, "en")).toBe("0m");
     expect(formatPercent(0.834, "en")).toBe("83%");
   });
 });

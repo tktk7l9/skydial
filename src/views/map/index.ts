@@ -14,6 +14,7 @@ import type { AppCtx, View } from "../../app";
 import { locationSnapshot } from "../../state/appState";
 import { parseLatLng } from "../../state/locationInput";
 import { el } from "../../ui/dom";
+import { createGpsControl } from "../../ui/gpsControl";
 import { showToast } from "../../ui/toast";
 import { rayLine } from "./rays";
 
@@ -82,6 +83,10 @@ export function createMapView(ctx: AppCtx): View {
         moveWithUndo(loc);
       },
     },
+    // The map is where the location is set, so the GPS shortcut lives here
+    // too, not only on the home banner that disappears after the first pick
+    // (SHIG 30, 20, 42).
+    createGpsControl(ctx, { primary: false, mapLink: false }),
     coordError,
     el(
       "div",
@@ -90,6 +95,14 @@ export function createMapView(ctx: AppCtx): View {
       el("button", { type: "submit", class: "btn primary" }, ctx.tr("coordGo")),
     ),
   );
+  // Tiles failing to arrive (offline, blocked) would otherwise leave a grey
+  // grid with no explanation (SHIG 55).
+  const offlineNote = el(
+    "div",
+    { class: "li map-offline", role: "status", "aria-live": "polite" },
+    el("span", {}, ctx.tr("mapOffline")),
+  );
+  offlineNote.hidden = true;
   const root = el("div", { class: "view-fill" }, host, legend, coordForm);
 
   /** Move the location right away; a stray tap is one "Undo" away (15, 54, 57). */
@@ -116,6 +129,7 @@ export function createMapView(ctx: AppCtx): View {
     item(COLORS.moonrise, ctx.tr("moonriseDirection")),
     item(COLORS.moonset, ctx.tr("moonsetDirection")),
     el("div", { class: "li" }, el("span", {}, ctx.tr("tapMapToSet"))),
+    offlineNote,
   );
 
   const map = L.map(host, { zoomControl: false, attributionControl: true });
@@ -165,6 +179,12 @@ export function createMapView(ctx: AppCtx): View {
         tileLayer = L.tileLayer(def.url, { attribution: def.attribution, maxZoom: 18 }).addTo(
           map,
         );
+        tileLayer.on("tileerror", () => {
+          offlineNote.hidden = false;
+        });
+        tileLayer.on("tileload", () => {
+          offlineNote.hidden = true;
+        });
       }
 
       const loc = s.location;

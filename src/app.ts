@@ -94,7 +94,13 @@ const LS = {
   tiles: "skydial:tiles",
 };
 
-export function startApp(root: HTMLElement): void {
+export interface AppOptions {
+  /** Reload the page (a failed chunk fetch is remembered by the browser). */
+  reload?: () => void;
+}
+
+export function startApp(root: HTMLElement, options: AppOptions = {}): void {
+  const reload = options.reload ?? ((): void => location.reload());
   // ----- Initial state: defaults ← localStorage ← URL -----
   const locale = detectLocale(navigator.language, localStorage.getItem(LS.locale));
   const initial: AppState = { ...defaultState(locale) };
@@ -251,20 +257,59 @@ export function startApp(root: HTMLElement): void {
     view.update(s, effectiveTime(s));
   }
 
+  /** Replace the content with a short note (loading / failed) for a lazy tab. */
+  function showNote(...children: Array<HTMLElement | string>): void {
+    clear(content);
+    content.classList.add("wide");
+    content.append(el("div", { class: "view-note" }, ...children));
+  }
+
   function showTab(s: AppState): void {
     const existing = views.get(s.tab);
     if (existing) {
       mountView(existing, s);
       return;
     }
-    if (s.tab === "dashboard" || loadingTab === s.tab) return;
+    if (s.tab === "dashboard") return;
+    // Answer the tap right away: the old view goes and a note says the new
+    // one is on its way, so a slow chunk never looks like a missed tap
+    // (SHIG 65, 66).
+    showNote(el("p", { role: "status" }, ctx.tr("loadingView")));
+    if (loadingTab === s.tab) return;
     loadingTab = s.tab;
     const tab = s.tab;
-    void loaders[tab]().then((view) => {
-      loadingTab = null;
-      views.set(tab, view);
-      if (store.get().tab === tab) mountView(view, store.get());
-    });
+    void loaders[tab]().then(
+      (view) => {
+        loadingTab = null;
+        views.set(tab, view);
+        if (store.get().tab === tab) mountView(view, store.get());
+      },
+      () => {
+        // A chunk that will not load (offline before it was cached): say so
+        // and offer another go rather than leaving the tab blank (SHIG 55, 58).
+        // Browsers memoize a failed module fetch, so a plain re-import would
+        // fail at once; a reload refetches, and the URL + localStorage carry
+        // the tab, time and place back in.
+        loadingTab = null;
+        if (store.get().tab !== tab) return;
+        showNote(
+          el("p", { role: "status" }, ctx.tr("loadFailed")),
+          el(
+            "button",
+            {
+              type: "button",
+              class: "btn primary",
+              onclick: () => {
+                clearTimeout(urlTimer);
+                writeUrl(store.get());
+                reload();
+              },
+            },
+            ctx.tr("retry"),
+          ),
+        );
+      },
+    );
   }
 
   // ----- Rendering -----
@@ -318,12 +363,13 @@ export function startApp(root: HTMLElement): void {
 
   // ----- URL sync (debounced replaceState) -----
   let urlTimer: number | undefined;
+  function writeUrl(s: AppState): void {
+    const q = encodeUrlState(s);
+    history.replaceState(null, "", q === "" ? location.pathname : q);
+  }
   function syncUrl(s: AppState): void {
     clearTimeout(urlTimer);
-    urlTimer = window.setTimeout(() => {
-      const q = encodeUrlState(s);
-      history.replaceState(null, "", q === "" ? location.pathname : q);
-    }, 300);
+    urlTimer = window.setTimeout(() => writeUrl(s), 300);
   }
 
   // ----- Service-worker update toast -----

@@ -91,9 +91,14 @@ export function openHousePanel(ctx: AppCtx, time: Date): void {
       body.replaceChildren();
 
       const maxKwh = Math.max(0.1, ...result.windows.map((w) => w.irradiationKwhM2.total));
-      for (const w of result.windows) {
-        const dir = ctx.trDir(w.azimuthDeg);
+      result.windows.forEach((w, i) => {
+        // "Window 1 · S · 1.7×2 m": which window, not only which way (SHIG 12, 24).
+        const dir = `${ctx.tr("windowLabel", { n: i + 1 })} · ${ctx.trDir(w.azimuthDeg)} · ${w.spec.w}×${w.spec.h} m`;
         const b = w.irradiationKwhM2;
+        const sunshine =
+          w.sunshineMinutes === 0
+            ? ctx.tr("resNoSunshine")
+            : ctx.fmtDur(w.sunshineMinutes * 60_000);
         const card = el(
           "div",
           { class: "card window-result" },
@@ -110,7 +115,7 @@ export function openHousePanel(ctx: AppCtx, time: Date): void {
           el(
             "div",
             { class: "footnote" },
-            `${ctx.tr("resSunshine")}: ${ctx.fmtDur(w.sunshineMinutes * 60_000)} · ${ctx.tr("resTotal")}: ${b.total.toFixed(1)} kWh/m²`,
+            `${ctx.tr("resSunshine")}: ${sunshine} · ${ctx.tr("resTotal")}: ${b.total.toFixed(1)} kWh/m²`,
           ),
           bar(ctx.tr("resDirect"), b.direct, maxKwh, "var(--accent-sun)"),
           bar(ctx.tr("resDiffuse"), b.isotropic + b.circumsolar, maxKwh, "var(--accent-blue)"),
@@ -126,7 +131,7 @@ export function openHousePanel(ctx: AppCtx, time: Date): void {
           ),
         );
         body.append(card);
-      }
+      });
       body.append(
         el(
           "div",

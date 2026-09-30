@@ -125,16 +125,35 @@ export function openSettings(ctx: AppCtx, animate = true, focusPill?: string): v
   );
 
   const gpsControl = createGpsControl(ctx, { onLocated: close, onOpenMap: close });
+  const coords = `${s.location.lat.toFixed(4)}, ${s.location.lng.toFixed(4)}`;
+  // The place reads as the header shows it: by its name when it has one,
+  // with the coordinates alongside (SHIG 6, 11).
+  const place =
+    s.locationName !== null
+      ? `${s.locationName} (${coords})`
+      : coords + (s.locationSource === "manual" ? ` (${ctx.tr("manualLocation")})` : "");
   const locLine = el(
     "div",
     { class: "setting-row" },
+    el("span", { class: "lbl" }, `${ctx.tr("location")}: ${place}`),
     el(
-      "span",
-      { class: "lbl" },
-      `${ctx.tr("location")}: ${s.location.lat.toFixed(4)}, ${s.location.lng.toFixed(4)}` +
-        (s.locationSource === "manual" ? ` (${ctx.tr("manualLocation")})` : ""),
+      "div",
+      { class: "loc-actions" },
+      gpsControl,
+      // Both ways to set the place sit together (SHIG 42).
+      el(
+        "button",
+        {
+          type: "button",
+          class: "btn",
+          onclick: () => {
+            ctx.store.set({ tab: "map" });
+            close();
+          },
+        },
+        ctx.tr("pickOnMap"),
+      ),
     ),
-    gpsControl,
   );
   // A name of the user's own ("Home") replaces raw coordinates in the header.
   const nameInput = el("input", {
