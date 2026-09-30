@@ -1267,3 +1267,64 @@ select.num-input {
 .coord-error[hidden] {
   display: none;
 }
+
+/* ===== SHIG round 2 (2026-09-30) ===== */
+
+/* Settings: GPS and "pick on the map" side by side (SHIG 42). */
+.loc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+/* Map: the GPS shortcut sits above the coordinate field, on the tiles. */
+.coord-form .gps-control {
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+
+.coord-form .gps-control .btn {
+  background: rgb(18 24 48 / 92%);
+  box-shadow: var(--shadow);
+}
+
+:root[data-theme="light"] .coord-form .gps-control .btn {
+  background: #fff;
+}
+
+.coord-form .gps-status {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: rgb(0 0 0 / 70%);
+  color: #fff;
+}
+
+/* Lazy tab: loading / failed note in place of the view (SHIG 65, 55). */
+.view-note {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 40vh;
+  padding: 24px 16px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.view-note p {
+  margin: 0;
+}
+
+/* Map: tile failure notice inside the legend (SHIG 55). */
+.legend .map-offline {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  font-weight: 600;
+}
+
+.legend .map-offline[hidden] {
+  display: none;
+}

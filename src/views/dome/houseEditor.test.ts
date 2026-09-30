@@ -42,6 +42,15 @@ describe("house editor", () => {
     expect(sheet).toBeNull();
   });
 
+  it("names the unit of every numeric field (SHIG 28, 31, 12)", () => {
+    open();
+    for (const name of ["間口 (m)", "奥行 (m)", "軒高 (m)", "軒の出 (m)", "正面の方位 (°)", "地面反射率 (0–1)"]) {
+      expect(screen.getAllByRole("spinbutton", { name })[0]).toBeVisible();
+    }
+    expect(screen.getAllByRole("spinbutton", { name: "腰高 (m)" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("spinbutton", { name: "回転 (°)" }).length).toBeGreaterThan(0);
+  });
+
   it("applies an in-range value as typed", async () => {
     const { ctx, sheet } = open();
     expect(sheet!.getByRole("heading", { name: "家の設定" })).toBeVisible();

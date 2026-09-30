@@ -40,7 +40,10 @@ describe("dashboard", () => {
     expect(row("昼の長さ")).toMatch(/14/);
     expect(row("南中")).toMatch(/^11:4\d$/);
     // Noon sun is high: a shadow ratio is shown next to the altitude.
-    expect(screen.getByText(/影 ×0\.\d/)).toBeVisible();
+    expect(screen.getByText(/影の長さ ×0\.\d/)).toBeVisible();
+    // Both hero cards name the altitude the same way (SHIG 6).
+    expect(document.querySelector(".body-card.sun .sub")?.textContent).toMatch(/高度 /);
+    expect(document.querySelector(".body-card.moon .sub")?.textContent).toMatch(/高度 /);
     expect(screen.getByText(/日の入りまで/)).toBeVisible();
     expect(screen.getByText(/航海など高精度用途には使えません/)).toBeVisible();
     // The timeline band and its scale repeat the times listed in words, so
@@ -56,10 +59,10 @@ describe("dashboard", () => {
     while (sunPosition(new Date(t), TOKYO).apparentAltitude <= 0.15) t += 30_000;
     expect(sunPosition(new Date(t), TOKYO).apparentAltitude).toBeLessThan(0.5);
     const { ctx } = mount({ time: new Date(t), location: TOKYO, locationSource: "gps" });
-    expect(screen.getByText(/影 ×99\+/)).toBeVisible();
+    expect(screen.getByText(/影の長さ ×99\+/)).toBeVisible();
 
     ctx.store.set({ time: new Date(t - 30 * 60_000) });
-    expect(screen.queryByText(/影 ×/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/影の長さ ×/)).not.toBeInTheDocument();
   });
 
   it("asks for a location while the default (Tokyo) is in use", async () => {
@@ -115,6 +118,21 @@ describe("dashboard", () => {
     expect(full - before).toBeLessThan(30 * 86_400_000);
     await userEvent.click(screen.getByRole("button", { name: "次の新月" }));
     expect(ctx.store.get().time!.getTime()).toBeGreaterThan(full - 30 * 86_400_000);
+  });
+
+  it("steps a day back or forward at the same clock time (SHIG 20, 22)", async () => {
+    const { ctx } = mount({ time: new Date("2026-03-10T03:00:00Z"), location: TOKYO });
+    await userEvent.click(screen.getByRole("button", { name: "翌日" }));
+    expect(ctx.store.get().time?.toISOString()).toBe("2026-03-11T03:00:00.000Z");
+    await userEvent.click(screen.getByRole("button", { name: "前日" }));
+    await userEvent.click(screen.getByRole("button", { name: "前日" }));
+    expect(ctx.store.get().time?.toISOString()).toBe("2026-03-09T03:00:00.000Z");
+    // Live mode steps from now.
+    ctx.store.set({ time: null });
+    const now = Date.now();
+    await userEvent.click(screen.getByRole("button", { name: "翌日" }));
+    expect(ctx.store.get().time!.getTime() - now).toBeGreaterThanOrEqual(86_400_000 - 5_000);
+    expect(ctx.store.get().time!.getTime() - now).toBeLessThanOrEqual(86_400_000 + 5_000);
   });
 
   it("shows the moon age and phase name, and recomputes a new day", () => {

@@ -18,9 +18,15 @@ const lazy = vi.hoisted(() => ({
   ctx: null as AppCtx | null,
   created: [] as string[],
   destroyed: [] as string[],
+  /** Names whose next creation throws (a chunk that failed to load). */
+  failing: new Set<string>(),
 }));
 function fakeView(name: string) {
   return (ctx: AppCtx): View => {
+    if (lazy.failing.has(name)) {
+      lazy.failing.delete(name);
+      throw new Error(`${name} chunk failed`);
+    }
     lazy.ctx = ctx;
     lazy.created.push(name);
     const root = el("section", { "aria-label": `${name}-view` });
@@ -39,11 +45,12 @@ vi.mock("./views/ar/index", () => ({ createArView: fakeView("ar") }));
 
 const NOW = new Date("2026-06-21T03:00:00Z");
 
+const reload = vi.fn();
 function boot(search = ""): HTMLElement {
   history.replaceState(null, "", `/${search}`);
   const root = document.createElement("div");
   document.body.replaceChildren(root);
-  startApp(root);
+  startApp(root, { reload });
   return root;
 }
 
@@ -79,6 +86,8 @@ describe("app shell", () => {
     lazy.ctx = null;
     lazy.created.length = 0;
     lazy.destroyed.length = 0;
+    lazy.failing.clear();
+    reload.mockClear();
   });
   afterEach(() => {
     dismissToast();
@@ -115,6 +124,42 @@ describe("app shell", () => {
     await user.click(tabbar().getByRole("button", { name: "地図" }));
     expect(screen.getByRole("region", { name: "map-view" })).toBeInTheDocument();
     expect(lazy.created).toEqual(["map"]);
+  });
+
+  it("answers a tab tap at once with a loading note (SHIG 65, 66)", async () => {
+    boot();
+    tabbar().getByRole("button", { name: "ドーム" }).click();
+    expect(screen.getByRole("status")).toHaveTextContent("読み込み中…");
+    expect(screen.queryByRole("note")).not.toBeInTheDocument(); // the dashboard is gone
+    await flushLazy();
+    expect(screen.queryByText("読み込み中…")).not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "dome-view" })).toBeInTheDocument();
+  });
+
+  it("says when a view could not load and retries on request (SHIG 55, 58)", async () => {
+    lazy.failing.add("map");
+    boot();
+    tabbar().getByRole("button", { name: "地図" }).click();
+    await flushLazy();
+    expect(screen.getByText("読み込めませんでした")).toBeVisible();
+    // Browsers remember a failed module fetch, so a retry is a reload; the
+    // URL (tab, time, place) and localStorage bring the state back. The URL
+    // is written before the reload even if its debounce has not run yet.
+    expect(location.search).not.toContain("tab=map");
+    await user.click(screen.getByRole("button", { name: "再試行" }));
+    expect(location.search).toContain("tab=map");
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("drops a failure notice the user has already left behind", async () => {
+    lazy.failing.add("ar");
+    boot();
+    const tabs = tabbar();
+    tabs.getByRole("button", { name: "AR" }).click();
+    tabs.getByRole("button", { name: "ホーム" }).click();
+    await flushLazy();
+    expect(screen.queryByText("読み込めませんでした")).not.toBeInTheDocument();
+    expect(screen.getByRole("note")).toBeInTheDocument();
   });
 
   it("does not start a second load while one is pending, and skips a stale mount", async () => {

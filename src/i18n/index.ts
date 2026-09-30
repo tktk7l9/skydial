@@ -130,11 +130,20 @@ export function formatDeg(value: number, locale: Locale): string {
 }
 
 /** A duration in ms as "13h 24m". */
+/**
+ * "14h 37m" / "14時間37分". A zero hour is left out ("52m") and an exact
+ * hour count drops the minutes ("2h"), so the reader gets the number that
+ * matters rather than a fixed template (SHIG 28).
+ */
 export function formatDuration(ms: number, locale: Locale): string {
   const totalMin = Math.round(ms / 60_000);
   const h = Math.floor(totalMin / 60);
   const m = totalMin % 60;
-  return locale === "ja" ? `${h}時間${m}分` : `${h}h ${m}m`;
+  const hours = locale === "ja" ? `${h}時間` : `${h}h`;
+  const minutes = locale === "ja" ? `${m}分` : `${m}m`;
+  if (h === 0) return minutes;
+  if (m === 0) return hours;
+  return locale === "ja" ? `${hours}${minutes}` : `${hours} ${minutes}`;
 }
 
 /** Percent with no decimals ("83%"). */

@@ -180,7 +180,8 @@ export function createDashboard(ctx: AppCtx): {
       el(
         "div",
         { class: "sub" },
-        `${ctx.trDir(moon.azimuth)} · ${ctx.fmtDeg(moon.apparentAltitude)} · ${ctx.fmtPct(phase.illumination)}`,
+        // Same shape as the sun card: direction · altitude · extra (SHIG 6).
+        `${ctx.trDir(moon.azimuth)} · ${ctx.tr("altitude")} ${ctx.fmtDeg(moon.apparentAltitude)} · ${ctx.fmtPct(phase.illumination)}`,
       ),
     );
     content.append(el("div", { class: "hero" }, sunCard, moonCard));
@@ -220,10 +221,18 @@ export function createDashboard(ctx: AppCtx): {
         label,
       );
     const year = day.dayStart.getUTCFullYear();
+    // "Tomorrow's sunset" is the most common question after today's, so a
+    // day step sits first, ahead of the seasonal jumps (SHIG 20, 22). The
+    // step goes through the neighbouring day's noon so a DST change in the
+    // device zone cannot land it on the same day.
+    const dayStep = (days: number): Date =>
+      sameClockOn(new Date(day.dayStart.getTime() + (days * 24 + 12) * 3_600_000), s);
     timelineCard.append(
       el(
         "div",
         { class: "pillgroup chips" },
+        chip(ctx.tr("chipPrevDay"), () => dayStep(-1)),
+        chip(ctx.tr("chipNextDay"), () => dayStep(1)),
         chip(ctx.tr("domeSummerSolstice"), () => sameClockOn(solsticeInstant(year, "jun"), s)),
         chip(ctx.tr("domeWinterSolstice"), () => sameClockOn(solsticeInstant(year, "dec"), s)),
         chip(ctx.tr("chipNextFull"), () => nextPrincipalPhase(time, "full")),

@@ -4,13 +4,16 @@ import userEvent from "@testing-library/user-event";
 import { createMapView } from "./index";
 import { createTestCtx } from "../../test-utils/testCtx";
 import type { AppState } from "../../state/appState";
-import type { View } from "../../app";
+import type { AppCtx, View } from "../../app";
 import { dismissToast } from "../../ui/toast";
 
 const TOKYO = { lat: 35.6762, lng: 139.6503 };
 
-function mount(patch: Partial<AppState> = {}) {
-  const ctx = createTestCtx({ time: new Date("2026-06-21T03:00:00Z"), utcOffsetMin: 540, ...patch });
+function mount(patch: Partial<AppState> = {}, overrides: Partial<AppCtx> = {}) {
+  const ctx = createTestCtx(
+    { time: new Date("2026-06-21T03:00:00Z"), utcOffsetMin: 540, ...patch },
+    overrides,
+  );
   const view: View = createMapView(ctx);
   document.body.replaceChildren(view.root);
   const render = (): void => {
@@ -34,6 +37,13 @@ describe("map view", () => {
       expect(root.getByText(label)).toBeVisible();
     }
     expect(root.getByText("地図をタップして地点を設定")).toBeVisible();
+  });
+
+  it("puts the GPS button next to the coordinate field (SHIG 30, 20)", async () => {
+    const requestGps = vi.fn(() => Promise.resolve(true));
+    const { root } = mount({}, { requestGps });
+    await userEvent.click(root.getByRole("button", { name: "現在地を使う" }));
+    expect(requestGps).toHaveBeenCalled();
   });
 
   it("rejects unreadable coordinates in place", async () => {
@@ -94,6 +104,17 @@ describe("map view", () => {
     ctx.store.set({ location: { lat: 69.65, lng: 18.96 }, time: new Date("2026-12-21T12:00:00Z") });
     ctx.store.set({ location: TOKYO, time: new Date("2026-06-21T15:00:00Z") });
     expect(paths()).toBeGreaterThanOrEqual(2);
+  });
+
+  it("says when the tiles cannot be fetched, and clears once one loads (SHIG 55)", () => {
+    const { root } = mount();
+    const note = root.getByText("地図の表示にはネット接続が必要です");
+    expect(note).not.toBeVisible();
+    const tile = document.querySelector("img.leaflet-tile") as HTMLImageElement;
+    tile.dispatchEvent(new Event("error"));
+    expect(note).toBeVisible();
+    tile.dispatchEvent(new Event("load"));
+    expect(note).not.toBeVisible();
   });
 
   it("tears the map down on destroy", () => {

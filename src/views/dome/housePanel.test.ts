@@ -32,7 +32,9 @@ describe("insolation results panel", () => {
     expect(within(dialog).getByText("計算中…")).toBeVisible();
     await waitFor(() => expect(within(dialog).queryByText("計算中…")).not.toBeInTheDocument());
     expect(dialog.querySelectorAll(".window-result")).toHaveLength(6);
-    expect(within(dialog).getAllByText("南").length).toBeGreaterThanOrEqual(3);
+    // Each card says which window it is, not only which way it faces (SHIG 12, 24).
+    expect(within(dialog).getByText(/^窓1 · 南 · 1\.\d+×\d(\.\d+)? m$/)).toBeVisible();
+    expect(within(dialog).getByText(/^窓6 · /)).toBeVisible();
     expect(totalLine()).toMatch(/^合計: \d+\.\d kWh$/);
     expect(within(dialog).getAllByText("直達").length).toBe(6);
     expect(within(dialog).getByText(/快晴を前提にした概算です/)).toBeVisible();
@@ -65,6 +67,8 @@ describe("insolation results panel", () => {
     };
     open(shaded);
     await waitFor(() => expect(screen.getByText(/床に日射パッチなし/)).toBeVisible());
+    // A north window in March gets no beam: said in words, not "0m" (SHIG 28).
+    expect(screen.getByText(/日照: 直射なし/)).toBeVisible();
   });
 
   it("reuses cached results and evicts old ones", async () => {
