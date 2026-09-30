@@ -43,6 +43,10 @@ describe("dashboard", () => {
     expect(screen.getByText(/影 ×0\.\d/)).toBeVisible();
     expect(screen.getByText(/日の入りまで/)).toBeVisible();
     expect(screen.getByText(/航海など高精度用途には使えません/)).toBeVisible();
+    // The timeline band and its scale repeat the times listed in words, so
+    // they are hidden from AT rather than read as a run of numbers.
+    expect(document.querySelector(".timeline")).toHaveAttribute("aria-hidden", "true");
+    expect(document.querySelector(".timeline-scale")).toHaveAttribute("aria-hidden", "true");
   });
 
   it("caps the shadow ratio at 99+ just above the horizon, and drops it below", () => {

@@ -199,8 +199,11 @@ export function createDashboard(ctx: AppCtx): {
 
     // --- Timeline ---
     const timelineCard = el("div", { class: "card" }, el("h2", {}, ctx.fmtDate(time)));
-    timelineCard.append(buildTimeline(day.dayStart, day.sun, day.golden, day.blue, time));
-    const scale = el("div", { class: "timeline-scale" });
+    // The band is a picture of the times listed below it; AT reads the list.
+    const timeline = buildTimeline(day.dayStart, day.sun, day.golden, day.blue, time);
+    timeline.setAttribute("aria-hidden", "true");
+    timelineCard.append(timeline);
+    const scale = el("div", { class: "timeline-scale", "aria-hidden": "true" });
     for (const h of [0, 6, 12, 18, 24]) scale.append(el("span", {}, String(h)));
     timelineCard.append(scale);
 

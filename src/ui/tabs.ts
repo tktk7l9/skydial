@@ -14,7 +14,7 @@ const TAB_DEFS: ReadonlyArray<{ tab: Tab; icon: IconName; label: MsgKey }> = [
 
 export function createTabbar(ctx: AppCtx): { root: HTMLElement; update(s: AppState): void } {
   const buttons = new Map<Tab, HTMLButtonElement>();
-  const root = el("nav", { class: "tabbar", "aria-label": "tabs" });
+  const root = el("nav", { class: "tabbar", "aria-label": ctx.tr("tabsNav") });
   for (const def of TAB_DEFS) {
     const btn = el("button", {
       type: "button",

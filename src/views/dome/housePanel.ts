@@ -7,7 +7,7 @@ import { encodeHouse } from "../../sunsim/houseCodec";
 import { simulateDay } from "../../sunsim/simulate";
 import type { HouseDayResult } from "../../sunsim/simulate";
 import type { AppCtx } from "../../app";
-import { closeSheet, el } from "../../ui/dom";
+import { el, openSheet } from "../../ui/dom";
 
 type Scenario = "today" | "jun" | "dec";
 
@@ -37,7 +37,8 @@ function getOrCompute(
 }
 
 function bar(label: string, kwh: number, max: number, color: string): HTMLElement {
-  const track = el("div", { class: "gain-bar-track" });
+  // The bar repeats the number beside it, so it is decoration for AT.
+  const track = el("div", { class: "gain-bar-track", "aria-hidden": "true" });
   const fill = el("div", { class: "gain-bar-fill" });
   fill.style.width = `${max > 0 ? Math.min(100, (kwh / max) * 100) : 0}%`;
   fill.style.background = color;
@@ -55,14 +56,12 @@ export function openHousePanel(ctx: AppCtx, time: Date): void {
   const house = ctx.store.get().house;
   if (house === null) return;
 
-  const backdrop = el("div", { class: "sheet-backdrop", onclick: close });
-  const sheet = el("div", { class: "sheet", role: "dialog", "aria-modal": "true" });
+  const { sheet, close } = openSheet({
+    title: ctx.tr("houseResultsTitle"),
+    closeLabel: ctx.tr("close"),
+  });
   const body = el("div", {});
   let scenario: Scenario = "today";
-
-  function close(): void {
-    closeSheet(backdrop, sheet);
-  }
 
   function scenarioDayStart(s: Scenario): Date {
     const state = ctx.store.get();
@@ -143,17 +142,22 @@ export function openHousePanel(ctx: AppCtx, time: Date): void {
   }
 
   const chipButtons = new Map<Scenario, HTMLButtonElement>();
-  const chips = el("div", { class: "pillgroup chips" });
+  const chips = el("div", { class: "pillgroup chips", role: "group" });
   for (const s of ["today", "jun", "dec"] as Scenario[]) {
     const btn = el(
       "button",
       {
         type: "button",
         class: `pill${scenario === s ? " active" : ""}`,
+        "aria-pressed": String(scenario === s),
         onclick: () => {
           scenario = s;
-          for (const b of chipButtons.values()) b.classList.remove("active");
+          for (const b of chipButtons.values()) {
+            b.classList.remove("active");
+            b.setAttribute("aria-pressed", "false");
+          }
           btn.classList.add("active");
+          btn.setAttribute("aria-pressed", "true");
           render();
         },
       },
@@ -165,7 +169,6 @@ export function openHousePanel(ctx: AppCtx, time: Date): void {
     chips.append(btn);
   }
 
-  sheet.append(el("h2", {}, ctx.tr("houseResultsTitle")), chips, body);
+  sheet.append(chips, body);
   render();
-  document.body.append(backdrop, sheet);
 }

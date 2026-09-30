@@ -224,7 +224,7 @@ export function startApp(root: HTMLElement): void {
   const topbar = el(
     "header",
     { class: "topbar" },
-    el("span", { class: "brand" }, "Skydial"),
+    el("h1", { class: "brand" }, "Skydial"),
     locChip,
     gearBtn,
   );

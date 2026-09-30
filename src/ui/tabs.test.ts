@@ -11,6 +11,7 @@ describe("tab bar", () => {
     document.body.replaceChildren(bar.root);
     ctx.store.subscribe((s) => bar.update(s));
     bar.update(ctx.store.get());
+    expect(bar.root).toHaveAccessibleName("画面切り替え");
     const nav = within(bar.root);
     expect(nav.getByRole("button", { name: "ホーム" })).toHaveAttribute("aria-current", "page");
 

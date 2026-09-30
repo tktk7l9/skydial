@@ -66,7 +66,8 @@ describe("map view", () => {
 
   it("sets the location from a tap on the map", async () => {
     const { ctx } = mount();
-    const host = document.querySelector(".leaflet-host") as HTMLElement;
+    // The map is a named region so the tap-to-set hint reaches AT (SHIG 59).
+    const host = screen.getByRole("region", { name: "地図をタップして地点を設定" });
     host.dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: 0, clientY: 0 }));
     expect(ctx.store.get().locationSource).toBe("manual");
     expect(screen.getByText("地点を変更しました")).toBeVisible();

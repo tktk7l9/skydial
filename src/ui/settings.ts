@@ -2,7 +2,7 @@
 
 import type { Locale, Theme, TileLayer } from "../state/appState";
 import type { AppCtx } from "../app";
-import { closeSheet, el } from "./dom";
+import { el, openSheet } from "./dom";
 import { createGpsControl } from "./gpsControl";
 
 const UTC_CHOICES: ReadonlyArray<number> = [-480, -300, 0, 60, 330, 480, 540, 600];
@@ -15,51 +15,53 @@ function offsetLabel(min: number): string {
   return `UTC${sign}${h}${m === 0 ? "" : `:${String(m).padStart(2, "0")}`}`;
 }
 
-/** `animate: false` swaps the sheet in place — see `rebuild` below. */
-export function openSettings(ctx: AppCtx, animate = true): void {
+/**
+ * `animate: false` swaps the sheet in place — see `rebuild` below — and
+ * `focusPill` names the choice that keyboard focus should land on again.
+ */
+export function openSettings(ctx: AppCtx, animate = true, focusPill?: string): void {
   const s = ctx.store.get();
 
-  const enter = animate ? "" : " no-enter";
-  const backdrop = el("div", { class: `sheet-backdrop${enter}`, onclick: close });
-  const sheet = el("div", {
-    class: `sheet${enter}`,
-    role: "dialog",
-    "aria-modal": "true",
+  const { backdrop, sheet, close } = openSheet({
+    title: ctx.tr("settings"),
+    closeLabel: ctx.tr("close"),
+    animate,
   });
 
-  function close(): void {
-    closeSheet(backdrop, sheet);
-  }
-
   /** Commit + re-render with fresh state, without replaying the slide-up. */
-  function rebuild(): void {
+  function rebuild(pillId: string): void {
     backdrop.remove();
     sheet.remove();
-    openSettings(ctx, false);
+    openSettings(ctx, false, pillId);
   }
 
   function pills<T extends string | number>(
+    group: string,
+    label: string,
     current: T,
     choices: ReadonlyArray<{ value: T; label: string }>,
     apply: (v: T) => void,
   ): HTMLElement {
-    const group = el("div", { class: "pillgroup" });
+    const root = el("div", { class: "pillgroup", role: "group", "aria-label": label });
     for (const c of choices) {
+      const pillId = `${group}:${c.value}`;
       const pill = el(
         "button",
         {
           type: "button",
           class: `pill${c.value === current ? " active" : ""}`,
+          "aria-pressed": String(c.value === current),
+          "data-pill": pillId,
           onclick: () => {
             apply(c.value);
-            rebuild();
+            rebuild(pillId);
           },
         },
         c.label,
       );
-      group.append(pill);
+      root.append(pill);
     }
-    return group;
+    return root;
   }
 
   function row(label: string, control: HTMLElement): HTMLElement {
@@ -67,10 +69,11 @@ export function openSettings(ctx: AppCtx, animate = true): void {
   }
 
   sheet.append(
-    el("h2", {}, ctx.tr("settings")),
     row(
       ctx.tr("language"),
       pills<Locale>(
+        "locale",
+        ctx.tr("language"),
         s.locale,
         [
           { value: "ja", label: "日本語" },
@@ -82,6 +85,8 @@ export function openSettings(ctx: AppCtx, animate = true): void {
     row(
       ctx.tr("theme"),
       pills<Theme>(
+        "theme",
+        ctx.tr("theme"),
         s.theme,
         [
           { value: "auto", label: ctx.tr("themeAuto") },
@@ -94,6 +99,8 @@ export function openSettings(ctx: AppCtx, animate = true): void {
     row(
       ctx.tr("mapTiles"),
       pills<TileLayer>(
+        "tiles",
+        ctx.tr("mapTiles"),
         s.tiles,
         [
           { value: "osm", label: ctx.tr("tilesOsm") },
@@ -105,6 +112,8 @@ export function openSettings(ctx: AppCtx, animate = true): void {
     row(
       ctx.tr("utcOffset"),
       pills<number>(
+        "utc",
+        ctx.tr("utcOffset"),
         s.utcOffsetMin ?? -1,
         [
           { value: -1, label: ctx.tr("utcOffsetDevice") },
@@ -149,5 +158,7 @@ export function openSettings(ctx: AppCtx, animate = true): void {
   );
   sheet.append(locLine, nameRow, el("p", { class: "footnote" }, ctx.tr("accuracyNote")));
 
-  document.body.append(backdrop, sheet);
+  if (focusPill !== undefined) {
+    sheet.querySelector<HTMLElement>(`[data-pill="${focusPill}"]`)?.focus();
+  }
 }

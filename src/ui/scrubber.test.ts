@@ -24,7 +24,9 @@ describe("time scrubber", () => {
   afterEach(() => document.body.replaceChildren());
 
   it("shows the live badge and hides 'Back to now' while live", () => {
-    const { root } = mount();
+    const { root, scrubber } = mount();
+    // A landmark of its own, since it lives outside <main>.
+    expect(scrubber.root).toHaveAttribute("aria-label", "時刻");
     expect(root.getByText("ライブ")).toBeVisible();
     expect(root.getByText("今に戻る")).not.toBeVisible();
   });

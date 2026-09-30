@@ -33,8 +33,10 @@ function samplePath(
 }
 
 export function createArView(ctx: AppCtx): View {
-  const video = el("video", { playsinline: true, muted: true });
-  const canvas = el("canvas", {});
+  // The passthrough and its overlay are a live picture with no text
+  // equivalent; the tab's intro card carries the words.
+  const video = el("video", { playsinline: true, muted: true, "aria-hidden": "true" });
+  const canvas = el("canvas", { "aria-hidden": "true" });
   const hint = el("div", { class: "view-hint" });
   hint.hidden = true;
 

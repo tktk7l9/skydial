@@ -91,6 +91,7 @@ describe("app shell", () => {
   it("paints the dashboard for the default location on first load", () => {
     boot();
     expect(document.documentElement.lang).toBe("ja");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Skydial");
     expect(locChip()).toHaveTextContent("35.68, 139.65");
     expect(locChip()).toHaveAccessibleName("地点: 35.68, 139.65 — 地図で地点を変更");
     expect(screen.getByRole("button", { name: "設定" })).toBeVisible();
