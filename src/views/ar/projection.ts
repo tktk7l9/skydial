@@ -1,5 +1,6 @@
 // Equirectangular screen projection for the AR overlay (pure).
 
+import { normalizeDeg180 } from "../../astro/angles";
 import type { Pose } from "./pose";
 
 /** Assumed horizontal field of view of the camera passthrough, degrees. */
@@ -10,10 +11,6 @@ export interface SkyPoint {
   altitude: number;
 }
 
-export function wrap180(d: number): number {
-  return ((d + 540) % 360) - 180;
-}
-
 export function project(
   point: SkyPoint,
   pose: Pose,
@@ -21,7 +18,7 @@ export function project(
   h: number,
 ): { x: number; y: number; visible: boolean } {
   const vFov = (H_FOV * h) / w;
-  const dx = wrap180(point.azimuth - pose.heading);
+  const dx = normalizeDeg180(point.azimuth - pose.heading);
   const dy = point.altitude - pose.pitch;
   const x = w / 2 + (dx / H_FOV) * w;
   const y = h / 2 - (dy / vFov) * h;

@@ -36,10 +36,14 @@ interface DayCache {
   newMoonMs?: number;
 }
 
+function dayKey(dayStart: Date, loc: GeoLocation): string {
+  return `${dayStart.getTime()}:${loc.lat.toFixed(4)}:${loc.lng.toFixed(4)}`;
+}
+
 function computeDay(time: Date, loc: GeoLocation, utcOffsetMin: number | null): DayCache {
   const dayStart = dayStartFor(time, utcOffsetMin);
   return {
-    key: `${dayStart.getTime()}:${loc.lat.toFixed(4)}:${loc.lng.toFixed(4)}`,
+    key: dayKey(dayStart, loc),
     dayStart,
     sun: sunDayEvents(dayStart, loc),
     moon: moonDayEvents(dayStart, loc),
@@ -312,7 +316,7 @@ export function createDashboard(ctx: AppCtx): {
     root,
     update(s, time) {
       const dayStart = dayStartFor(time, s.utcOffsetMin);
-      const key = `${dayStart.getTime()}:${s.location.lat.toFixed(4)}:${s.location.lng.toFixed(4)}`;
+      const key = dayKey(dayStart, s.location);
       // The solver-heavy day events are cached per (day, location); the DOM
       // rebuild itself with cheap per-instant positions runs in well under
       // a millisecond at the 1 Hz live tick.
