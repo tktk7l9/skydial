@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "太陽と月の位置・出入り・薄明を追う、洗練されたクロスプラットフォームPWA(Sun path & moon tracker)",
+  "description": "A refined cross-platform PWA tracking the position, rise/set and twilight of the sun and moon (sun path & moon tracker)",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
