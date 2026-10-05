@@ -1,15 +1,6 @@
-import { H_FOV, project, wrap180 } from "./projection";
+import { H_FOV, project } from "./projection";
 
 const pose = { heading: 180, pitch: 0, roll: 0 };
-
-describe("wrap180", () => {
-  it("wraps into [-180, 180)", () => {
-    expect(wrap180(190)).toBe(-170);
-    expect(wrap180(-190)).toBe(170);
-    expect(wrap180(0)).toBe(0);
-    expect(wrap180(540)).toBe(-180);
-  });
-});
 
 describe("project", () => {
   const W = 390;

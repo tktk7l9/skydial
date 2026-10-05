@@ -28,6 +28,8 @@ describe("angles", () => {
     expect(normalizeDeg180(190)).toBeCloseTo(-170, 12);
     expect(normalizeDeg180(-190)).toBeCloseTo(170, 12);
     expect(normalizeDeg180(45)).toBeCloseTo(45, 12);
+    expect(normalizeDeg180(540)).toBe(-180);
+    expect(normalizeDeg180(-600)).toBeCloseTo(120, 12);
     expect(normalizeDeg180(180)).toBeCloseTo(-180, 12);
   });
 

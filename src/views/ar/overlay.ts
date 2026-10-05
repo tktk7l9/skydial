@@ -2,8 +2,9 @@
 // sun/moon paths + markers. The world layer rotates with the device roll;
 // the compass ribbon stays screen-fixed.
 
+import { normalizeDeg180 } from "../../astro/angles";
 import type { Pose } from "./pose";
-import { H_FOV, project, wrap180 } from "./projection";
+import { H_FOV, project } from "./projection";
 import type { SkyPoint } from "./projection";
 
 export interface OverlayData {
@@ -110,7 +111,7 @@ export function drawOverlay(
   g.font = "600 12px system-ui, sans-serif";
   g.textAlign = "center";
   for (let az = 0; az < 360; az += 15) {
-    const dx = wrap180(az - pose.heading);
+    const dx = normalizeDeg180(az - pose.heading);
     if (Math.abs(dx) > H_FOV * 0.75) continue;
     const x = w / 2 + (dx / H_FOV) * w;
     const major = az % 90 === 0;
