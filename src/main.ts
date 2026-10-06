@@ -10,7 +10,7 @@ if (import.meta.env.PROD) {
   const beacon = document.createElement("script");
   beacon.type = "module";
   beacon.src = "https://static.cloudflareinsights.com/beacon.min.js";
-  beacon.dataset.cfBeacon = '{"token": "cd156fbf0fd24da0a12e58fdb4e63828"}';
+  beacon.dataset.cfBeacon = '{"token": "cd156fbf0fd24da0a12e58fdb4e63828"}'; // gitleaks:allow
   document.head.appendChild(beacon);
 }
 
