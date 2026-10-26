@@ -1,0 +1,86 @@
+/* Styles for public/404.html, the page Workers static assets serves for unknown
+   paths (assets.not_found_handling = "404-page"). The app's own stylesheet is
+   hashed by Vite, so this page keeps its own small copy of the palette. The CSP
+   allows no inline styles (style-src 'self'), hence a separate file. */
+:root {
+  --bg: #f3f5fb;
+  --fg: #17203c;
+  --dim: #46506d;
+  --link: #2b4a9a;
+  --line: #d9deec;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1026;
+    --fg: #eef1ff;
+    --dim: #b4bad3;
+    --link: #ffc266;
+    --line: #262d4d;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 24px 16px;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: ui-sans-serif, system-ui, -apple-system, "SF Pro Text", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", Meiryo, sans-serif;
+  line-height: 1.7;
+}
+
+main {
+  width: 100%;
+  max-width: 32rem;
+  text-align: center;
+}
+
+h1 {
+  margin: 0 0 12px;
+  font-size: 1.5rem;
+  line-height: 1.4;
+}
+
+p {
+  margin: 0 0 8px;
+  color: var(--dim);
+}
+
+/* A large, clearly bordered target (SHIG 13: 7mm+) that leads back home (SHIG 59, 60). */
+.home {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  margin-top: 20px;
+  padding: 10px 20px;
+  border: 2px solid var(--link);
+  border-radius: 999px;
+  color: var(--link);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.home:hover {
+  background: var(--line);
+}
+
+.home:focus-visible {
+  outline: 3px solid var(--fg);
+  outline-offset: 3px;
+}
