@@ -53,8 +53,8 @@ npm run deploy     # build + wrangler deploy(Cloudflare Workers)
 
 ## 品質指標(実測)
 
-- **Lighthouse: mobile / desktop とも 100/100/100/100**(2026-07-08 に旧ホスティングの Vercel 上で計測した値。Cloudflare Workers の本番では未計測)
-- **Mozilla Observatory: A+(120点・10/10)**
+- **Lighthouse: mobile 94/100/100/100・desktop 99/100/100/100**(2026-10-27 に Cloudflare Workers の本番 URL で計測。Lighthouse 13.5・mobile は 5 回、desktop は 3 回の中央値。2026-07-08 の旧ホスティング Vercel では mobile / desktop とも 100/100/100/100)
+- **Mozilla Observatory: A+(130点・12/12)**(2026-10-27 に本番 URL で計測)
 - 純ロジック層(astro/state/i18n/測地・投影・姿勢)カバレッジ **100% ゲート**(CI)
 - npm audit 0件・gitleaks 0件
 
