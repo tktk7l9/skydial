@@ -4,10 +4,14 @@
 // Cross-origin requests (map tiles) pass through untouched — the map tab is the
 // only feature that needs the network; all astronomy runs locally.
 
-const CACHE = "skydial-v2";
+const CACHE = "skydial-v3";
+// The offline shell is keyed by "/" on purpose: Workers static assets answers
+// "/index.html" with a redirect to "/", and a redirected response can never be
+// handed to a navigation (its redirect mode is "manual"), so a shell cached
+// under "/index.html" would fail the first offline open after install.
+const SHELL_KEY = "/";
 const SHELL = [
-  "/",
-  "/index.html",
+  SHELL_KEY,
   "/favicon.svg",
   "/manifest.webmanifest",
   "/icon-192.png",
@@ -35,6 +39,16 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+/** Store a copy of a successful, non-redirected response; the write is kept
+ *  alive past the response so a terminated worker cannot leave it half done. */
+function cacheIfOk(event, key, res) {
+  // A 404/5xx page or a redirect (status 0 "opaqueredirect", or a followed
+  // redirect) must never become what later requests are served from.
+  if (!res.ok || res.redirected) return;
+  const copy = res.clone();
+  event.waitUntil(caches.open(CACHE).then((c) => c.put(key, copy)));
+}
+
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET" || new URL(req.url).origin !== location.origin) return;
@@ -43,15 +57,10 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          // Only a successful response may replace the offline shell; a 404
-          // or 5xx page must never become what every offline navigation shows.
-          if (res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put("/index.html", copy));
-          }
+          cacheIfOk(event, SHELL_KEY, res);
           return res;
         })
-        .catch(() => caches.match("/index.html")),
+        .catch(() => caches.match(SHELL_KEY)),
     );
     return;
   }
@@ -61,10 +70,7 @@ self.addEventListener("fetch", (event) => {
       (hit) =>
         hit ||
         fetch(req).then((res) => {
-          if (res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(req, copy));
-          }
+          cacheIfOk(event, req, res);
           return res;
         }),
     ),
