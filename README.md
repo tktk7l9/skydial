@@ -48,14 +48,13 @@ npm run deploy     # build + wrangler deploy(Cloudflare Workers)
 2026-08-11、Vercel 無料枠の超過でアカウントが停止（全プロジェクトが
 `402 DEPLOYMENT_DISABLED`）したため移行した。ビルド成果物は純粋な静的
 ファイルなので Worker スクリプトは無く、`wrangler.jsonc` の `assets` だけで
-配信している。セキュリティヘッダーは `public/_headers`（`vercel.json` の
-`headers` を移植したもの）。Vercel 側の設定も残してあるので、復旧すれば
-そのまま両方に出せる。
+配信している。セキュリティヘッダーは `public/_headers`（Vercel 時代の `vercel.json` の
+`headers` を移植したもの。`vercel.json` は移行後に削除済み）。
 
 ## 品質指標(実測)
 
-- **Lighthouse: mobile / desktop とも 100/100/100/100**(Vercel 時代の本番 https://skydial.vercel.app ・2026-07-08計測。Cloudflare 移行後は再計測待ち)
-- **Mozilla Observatory: A+(120点・10/10)**
+- **Lighthouse: mobile 94/100/100/100・desktop 99/100/100/100**(2026-10-27 に Cloudflare Workers の本番 URL で計測。Lighthouse 13.5・mobile は 5 回、desktop は 3 回の中央値。2026-07-08 の旧ホスティング Vercel では mobile / desktop とも 100/100/100/100)
+- **Mozilla Observatory: A+(130点・12/12)**(2026-10-27 に本番 URL で計測)
 - 純ロジック層(astro/state/i18n/測地・投影・姿勢)カバレッジ **100% ゲート**(CI)
 - npm audit 0件・gitleaks 0件
 
